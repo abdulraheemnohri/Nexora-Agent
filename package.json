@@ -1,1 +1,22 @@
-{"name":"nexora-agent","version":"1.6.0","type":"module","private":true,"bin":{"nexora":"./bin/nexora.js"},"scripts":{"start":"node server.js","worker":"node src/worker.js","test":"node --test \"test/**/*.test.js\"","check":"node --check server.js && node --check public/app.js && node --check public/capabilities.js && node --check public/ui-pages.js"},"engines":{"node":">=18"},"dependencies":{"dotenv":"^17.2.2"}}
+{
+  "name": "nexora-agent",
+  "version": "1.7.0",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "nexora": "./bin/nexora.js",
+    "hermes": "./bin/hermes.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "worker": "node src/worker.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "check": "node --check server.js && node --check bin/nexora.js && node --check bin/hermes.js && node --check src/hermes-cli.js && node --check src/sessions.js && node --check src/provider-health.js && node --check src/tools/schemas.js && node --check public/app.js && node --check public/capabilities.js && node --check public/ui-pages.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2"
+  }
+}

@@ -26,6 +26,9 @@ import {listSources,addSource,inspect,importSkill,hermesOfficialCatalog} from ".
 import {listPresets,getPreset} from "./src/provider-presets.js";
 import {discoverProviderModels,testProviderConnection} from "./src/provider-discovery.js";
 import {getUiSettings,updateUiSettings,resetUiSettingsSection} from "./src/ui-settings.js";
+import {listSessions,createSession,getSession,appendMessage} from "./src/sessions.js";
+import {buildProviderHealth} from "./src/provider-health.js";
+import {toolSchema,allToolSchemas} from "./src/tools/schemas.js";
 
 const state=await loadState();
 const config=await loadConfig();
@@ -77,6 +80,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&/^\/api\/models\/[^/]+$/.test(u.pathname))return json(res,200,await modelStatus(decodeURIComponent(u.pathname.split("/").pop())));
 
  if(req.method==="GET"&&u.pathname==="/api/providers")return json(res,200,await providerStatus());
+ if(req.method==="GET"&&u.pathname==="/api/providers/health"){const status=await providerStatus();return json(res,200,buildProviderHealth({dynamicProviders:status.dynamicProviders,builtIn:status.builtIn}));}
  if(req.method==="GET"&&u.pathname==="/api/providers/presets")return json(res,200,listPresets());
  
  if(req.method==="POST"&&u.pathname==="/api/providers/presets"){const b=await readBody(req);const preset=getPreset(String(b.id||""));if(!preset)throw Error("Provider preset not found");const p=addProvider({...preset,apiKey:b.apiKey||""});return json(res,201,p)}
@@ -99,17 +103,20 @@ const server=http.createServer(async(req,res)=>{try{
  const sm=u.pathname.match(/^\/api\/skills\/([^/]+)\/(approve|rollback|disable)$/);if(sm&&req.method==="POST"){if(sm[2]==="approve")return json(res,200,await skills.approve(sm[1]));if(sm[2]==="disable")return json(res,200,await skills.disable(sm[1]));return json(res,200,await skills.rollback(sm[1]));}
 
  if(req.method==="GET"&&u.pathname==="/api/features")return json(res,200,{features:HERMES_FEATURES,toolsets:listToolsets(),tools:listTools()});
- if(req.method==="GET"&&u.pathname==="/api/tools")return json(res,200,toolsStatus());
+ if(req.method==="GET"&&u.pathname==="/api/tools")return json(res,200,{tools:toolsStatus(),schemas:allToolSchemas()});
  if(req.method==="GET"&&u.pathname==="/api/toolsets")return json(res,200,toolsetsStatus());
  if(req.method==="GET"&&u.pathname==="/api/settings")return json(res,200,getUiSettings());
  if(req.method==="PUT"&&u.pathname==="/api/settings"){const b=await readBody(req);const updated=updateUiSettings(b);applyUiRuntimeSettings(updated);audit(state,{event:"ui_settings_updated",sections:Object.keys(b)});await saveState(state);return json(res,200,updated)}
  const settingsReset=u.pathname.match(new RegExp("^/api/settings/([^/]+)$"));if(settingsReset&&req.method==="DELETE"){const updated=resetUiSettingsSection(decodeURIComponent(settingsReset[1]));applyUiRuntimeSettings(updated);audit(state,{event:"ui_settings_reset",section:settingsReset[1]});await saveState(state);return json(res,200,updated)}
  if(req.method==="GET"&&u.pathname==="/api/config"){const safeConfig=Object.fromEntries(Object.entries(config).filter(([k])=>!/(key|secret|token|password)/i.test(k)));safeConfig.anthropicConfigured=Boolean(config.anthropicKey);safeConfig.compatibleConfigured=Boolean(config.compatibleKey);return json(res,200,safeConfig)}
  if(req.method==="GET"&&u.pathname==="/api/state")return json(res,200,{memory:state.memory,skills:state.skills,tasks:state.tasks,schedules:state.schedules,audit:state.audit,queue:queue.snapshot()});
+ if(req.method==="GET"&&u.pathname==="/api/sessions")return json(res,200,listSessions());
+ if(req.method==="POST"&&u.pathname==="/api/sessions"){const b=await readBody(req);return json(res,201,createSession(String(b.title||"New conversation")));}
+ const sessionRoute=u.pathname.match(/^\/api\/sessions\/([^/]+)$/);if(sessionRoute&&req.method==="GET"){const session=getSession(decodeURIComponent(sessionRoute[1]));if(!session)return json(res,404,{error:"Session not found"});return json(res,200,session)}
  if(req.method==="GET"&&u.pathname==="/api/memory")return json(res,200,memory.search(u.searchParams.get("q")||"",Number(u.searchParams.get("limit")||20)));
  const memoryAction=u.pathname.match(new RegExp("^/api/memory/([^/]+)/archive$"));if(memoryAction&&req.method==="POST")return json(res,200,await memory.archive(decodeURIComponent(memoryAction[1])));
  const memoryItem=u.pathname.match(new RegExp("^/api/memory/([^/]+)$"));if(memoryItem&&req.method==="DELETE")return json(res,200,await memory.remove(decodeURIComponent(memoryItem[1])));
- if(req.method==="POST"&&u.pathname==="/api/chat"){const b=await readBody(req);audit(state,{event:"chat",provider:b.provider||null});await saveState(state);return json(res,200,await agent.run(String(b.message||""),b.provider))}
+ if(req.method==="POST"&&u.pathname==="/api/chat"){const b=await readBody(req);const message=String(b.message||"");if(!message.trim())throw Error("Message is required");if(b.sessionId){const session=getSession(String(b.sessionId));if(!session)throw Error("Session not found");appendMessage(session.id,"user",message,{provider:b.provider||null})}audit(state,{event:"chat",provider:b.provider||null,sessionId:b.sessionId||null});await saveState(state);const sessionHistory=b.sessionId?getSession(String(b.sessionId))?.messages||[]:[];const result=await agent.run(message,b.provider,sessionHistory);if(b.sessionId)appendMessage(String(b.sessionId),"assistant",String(result.result??result.error??JSON.stringify(result)),{taskId:result.id,status:result.status,provider:result.provider});return json(res,200,result)}
  if(req.method==="POST"&&u.pathname==="/api/tasks"){const b=await readBody(req);const t=agent.create(String(b.message||""),b.provider);audit(state,{event:"task_created",taskId:t.id});await saveState(state);queue.enqueue(t.id);return json(res,202,t)}
  const tm=u.pathname.match(/^\/api\/tasks\/([^/]+)\/(approve|cancel)$/);if(tm&&req.method==="POST"){const result=tm[2]==="approve"?await agent.approve(tm[1]):await agent.cancel(tm[1]);audit(state,{event:"task_"+tm[2],taskId:tm[1]});await saveState(state);return json(res,200,result)}
  if(req.method==="POST"&&u.pathname==="/api/memory"){const b=await readBody(req);return json(res,201,await memory.add(b.content,b.meta||{}))}

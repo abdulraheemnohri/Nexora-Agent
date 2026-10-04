@@ -8,7 +8,7 @@
   const field=(label,id,placeholder,value="",type="text")=>'<label class="cap-field"><span>'+label+'</span><input id="'+id+'" type="'+type+'" placeholder="'+esc(placeholder)+'" value="'+esc(value)+'"></label>';
   const textarea=(label,id,placeholder,value="")=>'<label class="cap-field"><span>'+label+'</span><textarea id="'+id+'" placeholder="'+esc(placeholder)+'">'+esc(value)+'</textarea></label>';
   const button=(label,action,id="",kind="")=>'<button class="mini '+kind+'" data-ui-action="'+action+'" data-id="'+esc(id)+'">'+label+'</button>';
-  const titles={dashboard:"Dashboard",chat:"Chat",tasks:"Tasks",memory:"Memory",models:"Models",schedules:"Schedules",tools:"Tools",channels:"Channels",audit:"Audit Log",settings:"Settings",system:"System",npm:"npm Packages",logs:"Logs"};
+  const titles={dashboard:"Dashboard",chat:"Chat",sessions:"Conversations",tasks:"Tasks",memory:"Memory",models:"Models",schedules:"Schedules",tools:"Tools",channels:"Channels",audit:"Audit Log",settings:"Settings",system:"System",npm:"npm Packages",logs:"Logs"};
   let active="dashboard", settingsCache={};
   function heading(v,sub=""){return '<span class="eyebrow">NEXORA / '+v.toUpperCase()+'</span>'+(sub?'<p class="muted">'+esc(sub)+'</p>':'')}
   async function dashboard(){
@@ -21,12 +21,20 @@
   }
   async function chat(){
     const [providers,models]=await Promise.all([api("/api/providers"),api("/api/models")]);
+    let sessions=await api("/api/sessions");let activeId=localStorage.nexoraSessionId||"";
+    if(!sessions.some(s=>s.id===activeId)){const created=await api("/api/sessions",{method:"POST",body:JSON.stringify({title:"New conversation"})});activeId=created.id;localStorage.nexoraSessionId=activeId;sessions=await api("/api/sessions");}
     const list=providers.dynamicProviders||[];
     view.innerHTML=card("Chat with Nexora",heading("Agent console","Send a direct request or queue a longer task. Provider selection is explicit; Nexora will not silently switch to a cloud provider.")+
+      '<label class="cap-field"><span>Conversation</span><select id="chat-session">'+sessions.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===activeId?" selected":"")+'>'+esc(s.title)+" · "+esc(s.messageCount||0)+" messages</option>").join("")+'</select></label><div class="cap-actions">'+button("New conversation","session-new")+'<button class="icon-btn" type="button" data-ui-action="goto" data-id="sessions">Manage sessions</button></div>'+
       '<form id="ui-chat-form">'+field("Message","chat-message","Ask Nexora to inspect, plan, explain or create…")+
       '<label class="cap-field"><span>Provider override</span><select id="chat-provider"><option value="">Use configured default</option>'+list.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name||p.id)+'</option>').join("")+'</select></label>'+
       '<div class="cap-actions"><button class="primary" type="submit">Send message</button><button class="icon-btn" type="button" data-ui-action="queue-chat">Create queued task</button></div></form><div id="chat-result"></div>')+
       card("Local model catalog",'<p class="muted">'+esc((models||[]).length)+' model entries are available. Manage installation and selection in the Models page.</p><button class="icon-btn" data-ui-action="goto" data-id="models">Open Models →</button>');
+  }
+  async function sessionsPage(){
+    const sessions=await api("/api/sessions");
+    const rows=sessions.length?sessions.map(s=>'<div class="task-row"><div><b>'+esc(s.title)+'</b><small>'+esc(s.id)+' · '+esc(s.messageCount||0)+' messages</small><small>'+esc(s.updatedAt||s.createdAt||'')+'</small></div><div class="task-actions">'+button("Open in chat","session-open",s.id,"approve")+'</div></div>').join(""):'<p class="muted">No saved conversations yet. Open Chat to create one.</p>';
+    view.innerHTML=card("Conversation history",heading("Persistent sessions","Chat messages are stored locally in the sessions data file. Undo removes transcript history only; it cannot reverse external tool actions.")+'<div class="cap-actions">'+button("New conversation","session-new","")+'<button class="icon-btn" data-ui-action="goto" data-id="chat">Open Chat</button></div>')+card("Saved sessions",rows);
   }
   async function tasks(){
     const [state,ts]=await Promise.all([api("/api/state"),api("/api/tasks")]);
@@ -48,7 +56,16 @@
   }
   async function tools(){
     const [defs,sets,features]=await Promise.all([api("/api/tools"),api("/api/toolsets"),api("/api/features")]);
-    view.innerHTML=card("Tool registry",'<p class="muted">Inspect registered tools and available toolsets. Risky actions should remain approval-gated.</p><pre>'+esc(JSON.stringify(defs,null,2))+'</pre>')+card("Toolsets",'<pre>'+esc(JSON.stringify(sets,null,2))+'</pre>')+card("Feature catalog",'<pre>'+esc(JSON.stringify(features.features||features,null,2))+'</pre>');
+    const rows=(defs.schemas||[]).map(s=>{
+      const meta=(defs.tools||[]).find(t=>t.name===s.name)||{};
+      const risk=meta.risk||"unknown";
+      const gate=meta.requiresApproval?"Approval required":"Policy controlled";
+      return '<div class="task-row"><div><b>'+esc(s.name)+'</b><small>'+esc(s.description)+'</small><small>Risk: '+esc(risk)+' · '+esc(gate)+'</small><pre>'+esc(JSON.stringify(s.input,null,2))+'</pre></div></div>';
+    }).join("");
+    view.innerHTML=card("Tool Control",heading("Operator tools","Core execution tools expose explicit schemas and security metadata. External/MCP tools remain subject to their own authorization and approval policy.")+
+      (rows||'<p class="muted">No structured core tools are registered.</p>'))+
+      card("Toolsets",'<pre>'+esc(JSON.stringify(sets,null,2))+'</pre>')+
+      card("Feature catalog",'<pre>'+esc(JSON.stringify(features.features||features,null,2))+'</pre>');
   }
   async function channels(){
     const [config,settings]=await Promise.all([api("/api/config"),api("/api/settings")]);
@@ -105,7 +122,7 @@
     const [audit,state]=await Promise.all([api("/api/audit"),api("/api/state")]);
     view.innerHTML=card("Runtime logs",'<p class="muted">The web API currently exposes audit events and task state, not arbitrary host log files. Use the terminal command shown for service stdout/stderr.</p><pre>npm start\n# worker process (optional)\nnpm run worker</pre><div class="cap-actions"><button class="icon-btn" data-ui-action="export-audit">Export audit JSON</button><button class="icon-btn" data-ui-action="goto" data-id="system">System diagnostics →</button></div>')+card("Latest events",(audit||[]).slice(0,100).map(a=>'<div class="task-row"><div><b>'+esc(a.event||a.action||"event")+'</b><small>'+esc(a.createdAt||a.timestamp||"")+'</small><pre>'+esc(JSON.stringify(a,null,2))+'</pre></div></div>').join("")||'<p class="muted">No events.</p>')+card("Queue snapshot",'<pre>'+esc(JSON.stringify(state.queue||{},null,2))+'</pre>');
   }
-  const pages={dashboard,chat,tasks,memory,models,schedules,tools,channels,audit:auditPage,settings,system,npm:npmPage,logs};
+  const pages={dashboard,chat,sessions:sessionsPage,tasks,memory,models,schedules,tools,channels,audit:auditPage,settings,system,npm:npmPage,logs};
   async function render(page){
     active=page;document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.v===page));
     const title=document.querySelector("#page-title");if(title)title.textContent=titles[page]||page;
@@ -117,6 +134,8 @@
     const a=b.dataset.uiAction,id=b.dataset.id;
     try{
       if(a==="goto"){render(id);return}
+      if(a==="session-new"){const created=await api("/api/sessions",{method:"POST",body:JSON.stringify({title:"New conversation"})});localStorage.nexoraSessionId=created.id;toast("New conversation created");render("chat");return}
+      if(a==="session-open"){localStorage.nexoraSessionId=id;history.pushState({},"","/chat");render("chat");return}
       if(a==="retry"){render(active);return}
       if(a==="copy-command"){await navigator.clipboard.writeText(id);toast("Copied command");return}
       if(a==="settings-section"){document.querySelectorAll("[data-section-form]").forEach(f=>f.closest(".card").style.display=f.dataset.sectionForm===id?"":"none");return}
@@ -132,10 +151,11 @@
       if(a==="schedule-cancel"){await api("/api/schedules/"+encodeURIComponent(id)+"/cancel",{method:"POST",body:"{}"});toast("Schedule cancelled");render("schedules");return}
     }catch(err){toast(err.message)}
   },true);
+  document.addEventListener("change",e=>{if(e.target?.id==="chat-session"){localStorage.nexoraSessionId=e.target.value;render("chat")}});
   document.addEventListener("submit",async e=>{
     const form=e.target;
     try{
-      if(form.id==="ui-chat-form"){e.preventDefault();const message=document.querySelector("#chat-message").value.trim();if(!message)throw Error("Enter a message");const provider=document.querySelector("#chat-provider").value||undefined;const target=document.querySelector("#chat-result");target.innerHTML='<div class="card"><p class="muted">Working…</p></div>';const result=await api("/api/chat",{method:"POST",body:JSON.stringify({message,provider})});target.innerHTML='<div class="card"><h3>Agent response</h3><pre>'+esc(JSON.stringify(result,null,2))+'</pre>'+(result.status==="awaiting_approval"?'<p class="muted">This action is waiting for approval. Review it in Tasks.</p>':'')+'</div>';return}
+      if(form.id==="ui-chat-form"){e.preventDefault();const message=document.querySelector("#chat-message").value.trim();if(!message)throw Error("Enter a message");const provider=document.querySelector("#chat-provider").value||undefined;const target=document.querySelector("#chat-result");target.innerHTML='<div class="card"><p class="muted">Working…</p></div>';const result=await api("/api/chat",{method:"POST",body:JSON.stringify({message,provider,sessionId:localStorage.nexoraSessionId||undefined})});target.innerHTML='<div class="card"><h3>Agent response</h3><pre>'+esc(JSON.stringify(result,null,2))+'</pre>'+(result.status==="awaiting_approval"?'<p class="muted">This action is waiting for approval. Review it in Tasks.</p>':'')+'</div>';return}
       if(form.id==="ui-task-form"){e.preventDefault();const message=document.querySelector("#task-message").value.trim();if(!message)throw Error("Task message is required");await api("/api/tasks",{method:"POST",body:JSON.stringify({message})});toast("Task added to queue");render("tasks");return}
       if(form.id==="memory-search-form"){e.preventDefault();const q=document.querySelector("#memory-query").value.trim();history.replaceState(null,"",q?"?q="+encodeURIComponent(q):location.pathname);render("memory");return}
       if(form.id==="memory-add-form"){e.preventDefault();const content=document.querySelector("#memory-content").value.trim();if(!content)throw Error("Memory content is required");await api("/api/memory",{method:"POST",body:JSON.stringify({content,meta:{source:"dashboard"}})});toast("Memory saved");render("memory");return}

@@ -2,7 +2,7 @@ name: Nexora CI
 
 on:
   push:
-    branches: ["main", "nexora-v1-complete"]
+    branches: ["main", "nexora-v1-complete", "hermes-node-html"]
   pull_request:
     branches: ["main", "nexora-v1-complete"]
 
