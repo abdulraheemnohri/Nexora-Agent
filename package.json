@@ -11,7 +11,7 @@
     "start": "node server.js",
     "worker": "node src/worker.js",
     "test": "node --test \"test/**/*.test.js\"",
-    "check": "node --check server.js && node --check bin/nexora.js && node --check bin/hermes.js && node --check src/hermes-cli.js && node --check src/sessions.js && node --check public/app.js && node --check public/capabilities.js && node --check public/ui-pages.js"
+    "check": "node --check server.js && node --check bin/nexora.js && node --check bin/hermes.js && node --check src/hermes-cli.js && node --check src/sessions.js && node --check src/provider-health.js && node --check public/app.js && node --check public/capabilities.js && node --check public/ui-pages.js"
   },
   "engines": {
     "node": ">=18"
