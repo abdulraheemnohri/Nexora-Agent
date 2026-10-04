@@ -1,0 +1,1 @@
+import os from "node:os";export function systemInfo(){return{platform:process.platform,arch:process.arch,node:process.version,cpu:os.cpus().length,totalMemory:os.totalmem(),freeMemory:os.freemem(),cwd:process.cwd(),shell:process.env.SHELL||process.env.ComSpec||null}}
