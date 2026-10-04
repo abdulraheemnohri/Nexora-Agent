@@ -38,6 +38,7 @@ const delegation=new Delegation(state,saveState,queue,{maxDelegationDepth:Number
 function applyUiRuntimeSettings(s){
  if(s.general?.workspace){config.workspace=path.resolve(config.root,s.general.workspace);fs.mkdirSync(config.workspace,{recursive:true});agent.config.workspace=config.workspace;}
  if(Number.isFinite(Number(s.ai?.maxSteps))){config.maxAgentSteps=Number(s.ai.maxSteps);agent.config.maxAgentSteps=config.maxAgentSteps;}
+ agent.config.preferredProvider=s.ai?.preferredProvider&&s.ai.preferredProvider!=="manual"?String(s.ai.preferredProvider):null;
  const approval=s.permissions?.approvalMode||s.terminal?.approvalMode||"ask";config.approvalMode=approval;config.security.approvalMode=approval;agent.config.security={...(agent.config.security||{}),approvalMode:approval};
  if(Number.isFinite(Number(s.scheduler?.maxConcurrentTasks)))queue.concurrency=Math.max(1,Number(s.scheduler.maxConcurrentTasks));
  if(Number.isFinite(Number(s.scheduler?.maxRetries)))queue.maxRetries=Math.max(0,Number(s.scheduler.maxRetries));
