@@ -50,7 +50,7 @@ export async function startInteractive() {
       if (!input.startsWith("/")) {
         appendMessage(session.id, "user", input);
         try {
-          const result = await agent.run(input, session.activeProvider || null);
+          const history = session.messages.slice(-20); const result = await agent.run(input, session.activeProvider || null, history);
           const answer = result.result ?? result.error ?? (result.status === "awaiting_approval" ? "Approval required. Task ID: " + result.id + ". Approve with: hermes approve " + result.id : JSON.stringify(result, null, 2));
           appendMessage(session.id, "assistant", answer, { taskId: result.id, status: result.status, provider: result.provider }); console.log("\n" + answer + "\n");
         } catch (error) { appendMessage(session.id, "assistant", "Error: " + error.message, { error: true }); console.error("Error:", error.message); }
@@ -65,7 +65,7 @@ export async function startInteractive() {
         else if (command === "switch") { const found = getSession(parts[0] || ""); if (!found) throw new Error("Session not found; use /sessions"); session = found; console.log("Switched to: " + session.title); }
         else if (command === "history") print(session.messages.map(m => ({ role: m.role, at: m.createdAt, content: m.content })));
         else if (command === "undo") { undoLastTurn(session.id); session = getSession(session.id); console.log("Last turn removed from saved history. Already-executed external actions are not reversed."); }
-        else if (command === "retry") { const last = [...session.messages].reverse().find(m => m.role === "user"); if (!last) throw new Error("No previous user message"); const result = await agent.run(last.content, session.activeProvider || null); const answer = result.result ?? result.error ?? JSON.stringify(result, null, 2); appendMessage(session.id, "assistant", answer, { taskId: result.id, status: result.status, retry: true }); console.log(answer); }
+        else if (command === "retry") { const last = [...session.messages].reverse().find(m => m.role === "user"); if (!last) throw new Error("No previous user message"); const history = session.messages.slice(-20); const result = await agent.run(last.content, session.activeProvider || null, history); const answer = result.result ?? result.error ?? JSON.stringify(result, null, 2); appendMessage(session.id, "assistant", answer, { taskId: result.id, status: result.status, retry: true }); console.log(answer); }
         else if (command === "model") { if (!arg) print({ providers: await providerStatus(), configured: listProviders(), active: session.activeProvider || "environment default" }); else { const selected = useProvider(parts[0]); session = updateSession(session.id, { activeProvider: selected.id || parts[0] }); console.log("Provider selected: " + (selected.id || parts[0])); } }
         else if (command === "skills") print(new Skills(state, saveState).list());
         else if (command === "memory") print(state.memory || []);
