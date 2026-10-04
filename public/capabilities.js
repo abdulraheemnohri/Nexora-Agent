@@ -1,5 +1,6 @@
 (() => {
   const view = document.querySelector("#view");
+  let inspectedSkillUrl = "";
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const api = async (url, options = {}) => {
     const token = localStorage.nexoraToken || "";
@@ -32,6 +33,7 @@
     view.innerHTML = card("Register an MCP server", '<p class="muted">Commands run on this machine. Only add servers and packages you trust. Use an executable and pass arguments separately; Nexora does not invoke a shell for MCP startup.</p><form id="mcp-form">'+field("Server name","mcp-name","e.g. docs-server")+field("Executable / command","mcp-command","e.g. npx")+field("Arguments (JSON array)","mcp-args","[\"-y\",\"package-name\"]",'[]')+field("Startup timeout (ms)","mcp-timeout","15000","15000","number")+'<button class="primary" type="submit">Register & connect</button></form>') + card("Registered servers", rows);
   }
   async function skillsPage() {
+    inspectedSkillUrl = "";
     const [library, skills] = await Promise.all([api("/api/skills/library"),api("/api/skills")]);
     const sources=(library.sources||[]).map(s=>'<div class="task-row"><div><b>'+esc(s.name)+'</b><small>'+esc(s.url)+'</small></div></div>').join("") || '<p class="muted">No custom sources yet.</p>';
     const rows=skills.length?skills.slice().reverse().map(s=>{
@@ -60,7 +62,7 @@
       if(kind==="mcp-connect"){await api("/api/mcp/"+encodeURIComponent(id),{method:"POST",body:"{}"});toast("MCP server connected");await mcpPage();}
       if(kind==="mcp-remove"){if(!confirm("Remove MCP server "+id+"? This stops its connection and removes its registration."))return;await api("/api/mcp/"+encodeURIComponent(id),{method:"DELETE",body:"{}"});toast("MCP server removed");await mcpPage();}
       if(kind.startsWith("skill-")){const op=kind.slice(6);if(op==="rollback"&&!confirm("Roll back this skill?"))return;await api("/api/skills/"+encodeURIComponent(id)+"/"+op,{method:"POST",body:"{}"});toast("Skill "+op+" complete");await skillsPage();}
-      if(kind==="skill-import"){const url=document.querySelector("#skill-url")?.value.trim();const name=document.querySelector("#skill-name")?.value.trim();if(!url)throw Error("Enter a SKILL.md URL and inspect it first.");const result=await api("/api/skills/import",{method:"POST",body:JSON.stringify({url,name,trust:"community"})});toast("Imported as proposal; approval required");await skillsPage();}
+      if(kind==="skill-import"){const url=document.querySelector("#skill-url")?.value.trim();const name=document.querySelector("#skill-name")?.value.trim();if(!url||url!==inspectedSkillUrl)throw Error("Inspect this exact SKILL.md URL before importing.");const result=await api("/api/skills/import",{method:"POST",body:JSON.stringify({url,name,trust:"community"})});toast("Imported as proposal; approval required");await skillsPage();}
     } catch(e){toast(e.message);}
   }, true);
   document.addEventListener("submit", async event=>{
@@ -78,6 +80,7 @@
       } else if(event.target.id==="skill-inspect-form"){
         const url=document.querySelector("#skill-url").value.trim();if(!url)throw Error("Enter a direct HTTPS SKILL.md URL.");
         const info=await api("/api/skills/inspect",{method:"POST",body:JSON.stringify({url})});
+        inspectedSkillUrl=url;
         const preview=document.querySelector("#skill-preview");
         preview.innerHTML='<div class="card"><span class="eyebrow">INSPECTION ONLY · NOT ACTIVE</span><h3>'+esc(info.name)+'</h3><p>'+esc(info.description)+'</p><small class="muted">'+esc(info.source)+' · '+esc(info.size)+' characters</small><pre>'+esc(info.content)+'</pre><p class="muted">Use “Import as proposal” after reviewing these instructions.</p></div>';
         toast("Skill inspected; not installed");
