@@ -15,6 +15,7 @@ import {loadState,saveState} from "./src/store.js";
 import {subscribe,clientCount} from "./src/events.js";
 import {TaskQueue} from "./src/task-queue.js";
 import {Delegation} from "./src/delegation.js";
+import {listModels,modelStatus,installModel,testModel,useModel} from "./src/litert-models.js";
 const state=await loadState();
 const config=await loadConfig();const agent=new Agent(state,saveState,config);const memory=new Memory(state,saveState);const skills=new Skills(state,saveState);const queue=new TaskQueue(agent,{concurrency:config.maxConcurrentTasks||2,maxRetries:Number(process.env.NEXORA_MAX_RETRIES||3)});agent.setQueue(queue);const scheduler=new Scheduler(state,saveState,queue);const delegation=new Delegation(state,saveState,queue,{maxDelegationDepth:Number(process.env.NEXORA_MAX_DELEGATION_DEPTH||2),maxChildTasks:Number(process.env.NEXORA_MAX_CHILD_TASKS||4)});scheduler.restore();queue.restore();
 const server=http.createServer(async(req,res)=>{try{
@@ -26,6 +27,9 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&u.pathname==="/api/events"&&!authorized(req)&&u.searchParams.get("token")!==process.env.NEXORA_API_TOKEN)return json(res,401,{error:"Unauthorized"});\n if(!authorized(req))return json(res,401,{error:"Unauthorized"});
 
  if(req.method==="GET"&&u.pathname==="/api/events"){res.writeHead(200,{"content-type":"text/event-stream","cache-control":"no-cache","connection":"keep-alive"});res.write("event: ready\\ndata: {}\\n\\n");const off=subscribe(res);req.on("close",off);return}
+ if(req.method==="GET"&&u.pathname==="/api/models")return json(res,200,await listModels());
+ const mm=u.pathname.match(/^\\/api\\/models\\/([^/]+)\\/(install|test|use)$/);if(mm&&req.method==="POST"){const id=decodeURIComponent(mm[1]);if(mm[2]==="install")return json(res,200,await installModel(id));if(mm[2]==="test")return json(res,200,await testModel(id));return json(res,200,useModel(id));}
+ if(req.method==="GET"&&u.pathname.match(/^\\/api\\/models\\/[^/]+$/)){const id=decodeURIComponent(u.pathname.split("/").pop());return json(res,200,await modelStatus(id));}
  if(req.method==="GET"&&u.pathname==="/api/providers")return json(res,200,await providers.status());
  if(req.method==="GET"&&u.pathname==="/api/features")return json(res,200,{features:HERMES_FEATURES,toolsets:listToolsets(),tools:listTools()});
  if(req.method==="GET"&&u.pathname==="/api/tools")return json(res,200,toolsStatus());
