@@ -12,15 +12,19 @@ import {loadConfig} from "./src/config.js";
 import {HERMES_FEATURES,listToolsets,listTools} from "./src/hermes.js";
 import {toolsStatus,toolsetsStatus} from "./src/tool-registry.js";
 import {loadState,saveState} from "./src/store.js";
+import {subscribe,clientCount} from "./src/events.js";
+import {TaskQueue} from "./src/task-queue.js";
 const state=await loadState();
 const config=await loadConfig();const agent=new Agent(state,saveState);const memory=new Memory(state,saveState);const skills=new Skills(state,saveState);const scheduler=new Scheduler(state,saveState,agent);scheduler.restore();
+const queue=new TaskQueue(agent,{concurrency:config.batch?.maxParallel||2});
 const server=http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,`http://${req.headers.host||"localhost"}`);
  if(req.method==="GET"&&u.pathname==="/")return sendFile(res,"public/index.html","text/html");
  if(req.method==="GET"&&u.pathname==="/app.js")return sendFile(res,"public/app.js","text/javascript");
  if(req.method==="GET"&&u.pathname==="/style.css")return sendFile(res,"public/style.css","text/css");
- if(req.method==="GET"&&u.pathname==="/api/health")return json(res,200,{ok:true,name:"Nexora",version:"1.2.0",platform:process.platform,node:process.version});
+ if(req.method==="GET"&&u.pathname==="/api/health")return json(res,200,{ok:true,name:"Nexora",version:"1.4.0",platform:process.platform,node:process.version});
  if(!authorized(req))return json(res,401,{error:"Unauthorized"});
+ if(req.method==="GET"&&u.pathname==="/api/events"){res.writeHead(200,{"content-type":"text/event-stream","cache-control":"no-cache","connection":"keep-alive"});res.write("event: ready\\ndata: {}\\n\\n");const off=subscribe(res);req.on("close",off);return}
  if(req.method==="GET"&&u.pathname==="/api/providers")return json(res,200,await providers.status());
  if(req.method==="GET"&&u.pathname==="/api/features")return json(res,200,{features:HERMES_FEATURES,toolsets:listToolsets(),tools:listTools()});
  if(req.method==="GET"&&u.pathname==="/api/tools")return json(res,200,toolsStatus());
@@ -30,7 +34,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&u.pathname==="/api/memory")return json(res,200,memory.search(u.searchParams.get("q")||"",Number(u.searchParams.get("limit")||20)));
  if(req.method==="GET"&&u.pathname==="/api/skills")return json(res,200,skills.list());
  if(req.method==="POST"&&u.pathname==="/api/chat"){const b=await readBody(req);audit(state,{event:"chat",provider:b.provider||null});await saveState(state);return json(res,200,await agent.run(String(b.message||""),b.provider));}
- if(req.method==="POST"&&u.pathname==="/api/tasks"){const b=await readBody(req);const t=agent.create(String(b.message||""),b.provider);audit(state,{event:"task_created",taskId:t.id});await saveState(state);agent.queue(t.id);return json(res,202,t);}
+ if(req.method==="POST"&&u.pathname==="/api/tasks"){const b=await readBody(req);const t=agent.create(String(b.message||""),b.provider);audit(state,{event:"task_created",taskId:t.id});await saveState(state);queue.enqueue(t.id);return json(res,202,t);}
  const tm=u.pathname.match(/^\/api\/tasks\/([^/]+)\/(approve|cancel)$/);if(tm&&req.method==="POST"){const result=tm[2]==="approve"?await agent.approve(tm[1]):await agent.cancel(tm[1]);audit(state,{event:"task_"+tm[2],taskId:tm[1]});await saveState(state);return json(res,200,result)}
  if(req.method==="POST"&&u.pathname==="/api/memory"){const b=await readBody(req);return json(res,201,await memory.add(b.content,b.meta||{}))}
  if(req.method==="POST"&&u.pathname==="/api/skills/propose"){const b=await readBody(req);return json(res,201,await skills.propose(b.name,b.description,b.instructions))}
