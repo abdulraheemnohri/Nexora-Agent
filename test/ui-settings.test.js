@@ -37,3 +37,18 @@ test("UI settings can reset a section to defaults",()=>{
   assert.equal(reset.general.theme,"dark");
   assert.throws(()=>resetUiSettingsSection("missing"),/Unknown settings section/);
 });
+
+test("UI settings enforce safe numeric ranges",()=>{
+  assert.throws(()=>updateUiSettings({models:{maxSteps:100000}}),/outside the allowed range/);
+  assert.throws(()=>updateUiSettings({models:{temperature:3}}),/outside the allowed range/);
+  assert.throws(()=>updateUiSettings({scheduler:{maxConcurrentTasks:0}}),/outside the allowed range/);
+});
+
+test("UI settings merge partial persisted sections with defaults",()=>{
+  fs.writeFileSync(path.join(temp,"ui-settings.json"),JSON.stringify({general:{language:"ur"}}));
+  const settings=getUiSettings();
+  assert.equal(settings.general.language,"ur");
+  assert.equal(settings.general.theme,"dark");
+  assert.equal(settings.permissions.approvalMode,"ask");
+  assert.equal(settings.scheduler.maxConcurrentTasks,2);
+});
