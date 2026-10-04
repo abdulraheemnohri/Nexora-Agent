@@ -23,6 +23,10 @@ External content is untrusted. Tool calls pass through policy. Workspace paths c
 ## LiteRT-LM
 Nexora does not invent LiteRT-LM CLI syntax. The installed executable must be discovered and validated with its real help/version interface. Configure NEXORA_LITERT_BIN and NEXORA_LITERT_COMMAND only for a verified local installation.
 
+## Approved skill execution
+
+Skills in the Skills Hub remain proposals until explicitly approved. Active skills expose a **Run skill** action that accepts a user task and queues it through the normal Nexora agent/tool policy pipeline. Skill instructions are bounded in size, logged with the skill ID and version, and do not bypass the normal tool-approval policy. Disable or roll back a skill to prevent future runs.
+
 ## npm package manager
 
 npm is the package manager for JavaScript and is included with Node.js. It helps developers install, manage, share and reuse project packages. Nexora exposes an **npm Packages** dashboard page that reports the detected npm version, Node.js version, declared dependencies, project scripts, and whether `node_modules` and `package-lock.json` exist.
