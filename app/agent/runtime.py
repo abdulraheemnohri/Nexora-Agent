@@ -28,12 +28,28 @@ class AgentRuntime:
             parts.append(f"{row['event'].upper()}:\n{row['data']}")
         return "\n\n".join(parts)
 
-    async def run(self, prompt, provider=None):
+    async def create_task(self, prompt, provider=None, status="queued"):
         with connect() as db:
-            cur = db.execute("INSERT INTO tasks(prompt,status,provider) VALUES(?,?,?)", (prompt, "running", provider))
+            cur = db.execute("INSERT INTO tasks(prompt,status,provider) VALUES(?,?,?)", (prompt, status, provider))
             task_id = cur.lastrowid
         trace(task_id, "prompt", prompt)
-        return await self._continue(task_id, provider)
+        return task_id
+
+    async def run(self, prompt, provider=None):
+        task_id = await self.create_task(prompt, provider, status="running")
+        return await self.execute_task(task_id, provider)
+
+    async def execute_task(self, task_id, provider=None):
+        with connect() as db:
+            row = db.execute("SELECT status,provider FROM tasks WHERE id=?", (task_id,)).fetchone()
+        if not row:
+            raise LookupError("Task not found")
+        if row["status"] == "cancelled":
+            return {"id": task_id, "status": "cancelled"}
+        selected = provider or row["provider"]
+        with connect() as db:
+            db.execute("UPDATE tasks SET status='running',provider=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", (selected, task_id))
+        return await self._continue(task_id, selected)
 
     async def approve(self, task_id):
         with connect() as db:
