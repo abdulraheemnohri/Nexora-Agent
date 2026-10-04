@@ -8,7 +8,7 @@
   const field=(label,id,placeholder,value="",type="text")=>'<label class="cap-field"><span>'+label+'</span><input id="'+id+'" type="'+type+'" placeholder="'+esc(placeholder)+'" value="'+esc(value)+'"></label>';
   const textarea=(label,id,placeholder,value="")=>'<label class="cap-field"><span>'+label+'</span><textarea id="'+id+'" placeholder="'+esc(placeholder)+'">'+esc(value)+'</textarea></label>';
   const button=(label,action,id="",kind="")=>'<button class="mini '+kind+'" data-ui-action="'+action+'" data-id="'+esc(id)+'">'+label+'</button>';
-  const titles={dashboard:"Dashboard",chat:"Chat",tasks:"Tasks",memory:"Memory",models:"Models",schedules:"Schedules",tools:"Tools",channels:"Channels",audit:"Audit Log",settings:"Settings",system:"System",logs:"Logs"};
+  const titles={dashboard:"Dashboard",chat:"Chat",tasks:"Tasks",memory:"Memory",models:"Models",schedules:"Schedules",tools:"Tools",channels:"Channels",audit:"Audit Log",settings:"Settings",system:"System",npm:"npm Packages",logs:"Logs"};
   let active="dashboard", settingsCache={};
   function heading(v,sub=""){return '<span class="eyebrow">NEXORA / '+v.toUpperCase()+'</span>'+(sub?'<p class="muted">'+esc(sub)+'</p>':'')}
   async function dashboard(){
@@ -86,11 +86,26 @@
     const [health,config,features,providers]=await Promise.all([api("/api/health"),api("/api/config"),api("/api/features"),api("/api/providers")]);
     view.innerHTML=card("System diagnostics",'<div class="grid">'+stat("Service",health.ok?"Healthy":"Unavailable")+stat("Version",health.version)+stat("OS",health.platform)+stat("Node.js",health.node)+stat("Bind host",config.host||"unknown")+stat("Port",config.port||"unknown")+stat("Approval mode",config.approvalMode||"unknown")+stat("Active provider",providers.active||"none")+'</div>')+card("Runtime configuration",'<pre>'+esc(JSON.stringify(config,null,2))+'</pre>')+card("Feature availability",'<pre>'+esc(JSON.stringify(features,null,2))+'</pre>');
   }
+  async function npmPage(){
+    const data=await api("/api/system/npm");
+    const p=data.project||{},scripts=p.scripts||{},deps=p.dependencies||[],dev=p.devDependencies||[];
+    const command=(name,label,desc)=>'<div class="task-row"><div><b>'+esc(label)+'</b><small>'+esc(desc)+'</small><pre>'+esc(name)+'</pre></div><button class="mini" data-ui-action="copy-command" data-id="'+esc(name)+'">Copy</button></div>';
+    view.innerHTML=card("npm — JavaScript package manager",heading("npm / packages","A package manager for JavaScript, included with Node.js. npm makes it easy for developers to share and reuse code.")+
+      '<div class="grid">'+stat("npm available",data.available?"Yes":"Not detected")+stat("npm version",data.version||"unavailable")+stat("Node.js",data.node)+stat("Project",p.name||"Nexora Agent")+stat("Project version",p.version||"unknown")+stat("Dependencies",deps.length)+stat("Dev dependencies",dev.length)+stat("node_modules",p.installed?"Installed":"Not installed")+stat("Lockfile",p.lockfile?"Present":"Not present")+'</div>')+
+      card("Common npm commands",'<p class="muted">Run these from the Nexora project root in Linux/macOS terminals, Windows PowerShell/Terminal, or Termux. npm scripts are portable across supported Node.js environments.</p>'+
+      command("npm install","Install dependencies","Resolve package.json dependencies and prepare the project.")+
+      command("npm test","Run tests","Run the Node.js test suite.")+
+      command("npm run check","Check JavaScript syntax","Check the main JavaScript entry points.")+
+      command("npm start","Start Nexora","Start the API server and web dashboard.")+
+      command("npm run worker","Start worker","Run the optional background worker process."))+
+      card("Project scripts",'<pre>'+esc(JSON.stringify(scripts,null,2))+'</pre>')+
+      card("Dependencies",'<p><b>Production</b></p><p>'+esc(deps.join(", ")||"None declared")+'</p><p><b>Development</b></p><p>'+esc(dev.join(", ")||"None declared")+'</p><p class="muted">Nexora does not install packages automatically from this page. Review package changes before installing new dependencies.</p>');
+  }
   async function logs(){
     const [audit,state]=await Promise.all([api("/api/audit"),api("/api/state")]);
     view.innerHTML=card("Runtime logs",'<p class="muted">The web API currently exposes audit events and task state, not arbitrary host log files. Use the terminal command shown for service stdout/stderr.</p><pre>npm start\n# worker process (optional)\nnpm run worker</pre><div class="cap-actions"><button class="icon-btn" data-ui-action="export-audit">Export audit JSON</button><button class="icon-btn" data-ui-action="goto" data-id="system">System diagnostics →</button></div>')+card("Latest events",(audit||[]).slice(0,100).map(a=>'<div class="task-row"><div><b>'+esc(a.event||a.action||"event")+'</b><small>'+esc(a.createdAt||a.timestamp||"")+'</small><pre>'+esc(JSON.stringify(a,null,2))+'</pre></div></div>').join("")||'<p class="muted">No events.</p>')+card("Queue snapshot",'<pre>'+esc(JSON.stringify(state.queue||{},null,2))+'</pre>');
   }
-  const pages={dashboard,chat,tasks,memory,models,schedules,tools,channels,audit:auditPage,settings,system,logs};
+  const pages={dashboard,chat,tasks,memory,models,schedules,tools,channels,audit:auditPage,settings,system,npm:npmPage,logs};
   async function render(page){
     active=page;document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.v===page));
     const title=document.querySelector("#page-title");if(title)title.textContent=titles[page]||page;
@@ -103,6 +118,7 @@
     try{
       if(a==="goto"){render(id);return}
       if(a==="retry"){render(active);return}
+      if(a==="copy-command"){await navigator.clipboard.writeText(id);toast("Copied command");return}
       if(a==="settings-section"){document.querySelectorAll("[data-section-form]").forEach(f=>f.closest(".card").style.display=f.dataset.sectionForm===id?"":"none");return}
       if(a==="settings-reset"){await api("/api/settings/"+encodeURIComponent(id),{method:"DELETE",body:"{}"});settingsCache=await api("/api/settings");toast("Section restored to defaults");render("settings");return}
       if(a==="export-audit"){const data=await api("/api/audit");const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));const link=document.createElement("a");link.href=url;link.download="nexora-audit.json";link.click();URL.revokeObjectURL(url);return}
