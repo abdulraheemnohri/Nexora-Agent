@@ -9,6 +9,7 @@ from app.learning.skills import list_skills, propose, test_skill, decide, rollba
 from app.channels.telegram import TelegramChannel
 from app.channels.whatsapp import WhatsAppCloudChannel
 from app.core.features import catalog
+from app.agent.tools import ToolRegistry
 
 settings = get_settings()
 app = FastAPI(title="Nexora Agent API", version="1.0.0")
