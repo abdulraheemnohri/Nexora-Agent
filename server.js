@@ -1,4 +1,5 @@
 import "dotenv/config";
+import {spawnSync} from "node:child_process";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -51,12 +52,24 @@ for(const m of listMcpServers().filter(x=>x.enabled!==false)){try{await agent.re
 const server=http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,`http://${req.headers.host||"localhost"}`);
  if(req.method==="GET"&&u.pathname==="/")return sendFile(res,"public/index.html","text/html");
- if(req.method==="GET"&&["/dashboard","/chat","/tasks","/memory","/skills","/providers","/models","/schedules","/tools","/channels","/mcp","/audit","/settings","/system","/logs"].includes(u.pathname))return sendFile(res,"public/index.html","text/html");
+ if(req.method==="GET"&&["/dashboard","/chat","/tasks","/memory","/skills","/providers","/models","/schedules","/tools","/channels","/mcp","/audit","/settings","/system","/npm","/logs"].includes(u.pathname))return sendFile(res,"public/index.html","text/html");
  if(req.method==="GET"&&u.pathname==="/app.js")return sendFile(res,"public/app.js","text/javascript");
  if(req.method==="GET"&&u.pathname==="/ui-pages.js")return sendFile(res,"public/ui-pages.js","text/javascript");
  if(req.method==="GET"&&u.pathname==="/style.css")return sendFile(res,"public/style.css","text/css");
  if(req.method==="GET"&&u.pathname==="/api/health")return json(res,200,{ok:true,name:"Nexora",version:"1.6.0",platform:process.platform,node:process.version});
  if(!authorized(req))return json(res,401,{error:"Unauthorized"});
+ if(req.method==="GET"&&u.pathname==="/api/system/npm"){
+  const packageFile=path.join(config.root,"package.json");
+  const packageInfo=JSON.parse(fs.readFileSync(packageFile,"utf8"));
+  const npmCommand=process.platform==="win32"?"npm.cmd":"npm";
+  const npmResult=spawnSync(npmCommand,["--version"],{encoding:"utf8",timeout:3000,windowsHide:true,shell:process.platform==="win32"});
+  return json(res,200,{
+   name:"npm",description:"A package manager for JavaScript, included with Node.js. npm makes it easy for developers to share and reuse code.",
+   available:!npmResult.error&&npmResult.status===0,version:!npmResult.error&&npmResult.status===0?npmResult.stdout.trim():null,
+   node:process.version,platform:process.platform,project:{name:packageInfo.name,version:packageInfo.version,private:!!packageInfo.private,engines:packageInfo.engines||{},scripts:packageInfo.scripts||{},dependencies:Object.keys(packageInfo.dependencies||{}),devDependencies:Object.keys(packageInfo.devDependencies||{}),lockfile:fs.existsSync(path.join(config.root,"package-lock.json")),installed:fs.existsSync(path.join(config.root,"node_modules"))},
+   commands:{install:"npm install",test:"npm test",check:"npm run check",start:"npm start",worker:"npm run worker"}
+  });
+ }
  if(req.method==="GET"&&u.pathname==="/api/events"){res.writeHead(200,{"content-type":"text/event-stream","cache-control":"no-cache","connection":"keep-alive"});res.write("event: ready\\ndata: {}\\n\\n");const off=subscribe(res);req.on("close",off);return}
 
  if(req.method==="GET"&&u.pathname==="/api/models")return json(res,200,await listModels());
