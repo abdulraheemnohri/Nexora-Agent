@@ -10,18 +10,18 @@ export function createToolRegistry(workspace,security={}) {
   const fs=new FileSystemTool(workspace);
   const mode=security.approvalMode==="high-risk"?"ask":(security.approvalMode||"ask");
   const tools=new Map([
-    ["terminal",{name:"terminal",risk:a=>commandRisk(a.command),execute:(a,c)=>terminal(a.command,c,a.timeout)}],
-    ["filesystem",{name:"filesystem",risk:a=>a.action==="write"?"high":"low",execute:a=>a.action==="read"?fs.read(a.path):a.action==="write"?fs.write(a.path,a.content):a.action==="list"?fs.list(a.path):a.action==="stat"?fs.stat(a.path):Promise.reject(Error("Unsupported filesystem action"))}],
-    ["git",{name:"git",risk:a=>commandRisk(a.command),execute:(a,c)=>git(a.command,c,a.mode||"ask")}],
-    ["system",{name:"system",risk:()=> "low",execute:async()=>systemInfo()}],
-    ["http",{name:"http",risk:()=> "medium",execute:httpRequest}],
-    ["process",{name:"process",risk:()=> "medium",execute:async()=>listProcesses()}]
+    ["terminal",{name:"terminal",risk:a=>commandRisk(a.command)}],
+    ["filesystem",{name:"filesystem",risk:a=>a.action==="write"?"high":"low"}],
+    ["git",{name:"git",risk:a=>commandRisk(a.command)}],
+    ["system",{name:"system",risk:()=> "low"}],
+    ["http",{name:"http",risk:()=> "medium"}],
+    ["process",{name:"process",risk:()=> "medium"}]
   ]);
   return {
     has:name=>tools.has(name),
     get:name=>tools.get(name),
     list:()=>[...tools.values()].map(t=>t.name),
-    authorize:(name,args={})=>{const tool=tools.get(name);if(!tool)throw Error("Unknown tool: "+name);const risk=tool.risk(args);return {risk,decision:decision({risk,mode})}},
-    execute:async(name,args={},cwd=workspace)=>{const tool=tools.get(name);if(!tool)throw Error("Unknown tool: "+name);const risk=tool.risk(args);const d=decision({risk,mode});if(d!=="allow")throw Error("Tool requires approval: "+name+" ("+risk+")");return tool.execute(args,cwd)}
+    authorize:(name,args={})=>{const tool=tools.get(name);if(!tool)throw Error("Unknown tool: "+name);const r=tool.risk(args);return {risk:r,decision:decision({risk:r},mode)}},
+    execute:async(name,args={},cwd=workspace,context={})=>{const tool=tools.get(name);if(!tool)throw Error("Unknown tool: "+name);const r=tool.risk(args);const d=decision({risk:r},mode);if(d!=="allow"&&!context.approved)throw Error("Tool requires approval: "+name+" ("+r+")");if(name==="terminal")return terminal(args.command,cwd,args.timeout);if(name==="filesystem")return args.action==="read"?fs.read(args.path):args.action==="write"?fs.write(args.path,args.content):args.action==="list"?fs.list(args.path):args.action==="stat"?fs.stat(args.path):Promise.reject(Error("Unsupported filesystem action"));if(name==="git")return git(args.command,cwd,args.mode||"ask");if(name==="system")return systemInfo();if(name==="http")return httpRequest(args);if(name==="process")return listProcesses();throw Error("Unsupported tool: "+name)}
   };
 }

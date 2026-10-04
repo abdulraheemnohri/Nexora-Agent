@@ -1,23 +1,10 @@
-import {spawn} from "node:child_process";
-function rpc(child,method,params={},id=1,timeout=15000){
- return new Promise((resolve,reject)=>{
-  let buf="";
-  const timer=setTimeout(()=>reject(Error("MCP request timed out")),timeout);
-  const onData=d=>{
-   buf+=d.toString();
-   const lines=buf.split("\n");buf=lines.pop();
-   for(const line of lines){if(!line.trim())continue;try{const m=JSON.parse(line);if(m.id===id){clearTimeout(timer);if(m.error)reject(Error(m.error.message||"MCP error"));else resolve(m.result)}}catch{}}
-  };
-  child.stdout.on("data",onData);child.stderr.resume();
-  child.stdin.write(JSON.stringify({jsonrpc:"2.0",id,method,params})+"\n");
- });
+import{spawn}from"node:child_process";import crypto from"node:crypto";
+function rpc(child,method,params={},timeout=15000){const id=crypto.randomUUID();return new Promise((resolve,reject)=>{let buf="";const timer=setTimeout(()=>reject(Error("MCP request timed out")),timeout);const onData=d=>{buf+=d.toString();const lines=buf.split("\n");buf=lines.pop();for(const line of lines){if(!line.trim())continue;try{const m=JSON.parse(line);if(m.id===id){clearTimeout(timer);child.stdout.off("data",onData);m.error?reject(Error(m.error.message||"MCP error")):resolve(m.result)}}catch{}}};child.stdout.on("data",onData);try{child.stdin.write(JSON.stringify({jsonrpc:"2.0",id,method,params})+"\n")}catch(e){clearTimeout(timer);reject(e)}})}
+export class McpClient{
+ constructor(command,args=[],opts={}){this.command=String(command);this.args=Array.isArray(args)?args:[];this.timeout=Math.min(Math.max(Number(opts.timeout)||15000,1000),120000);this.child=null;this.tools=[]}
+ async connect(){if(this.child)return;this.child=spawn(this.command,this.args,{stdio:["pipe","pipe","pipe"],shell:false,env:{...process.env}});this.child.on("exit",()=>{this.child=null});await rpc(this.child,"initialize",{protocolVersion:"2025-06-18",capabilities:{},clientInfo:{name:"nexora-agent",version:"1.6.0"}},this.timeout);const r=await rpc(this.child,"notifications/initialized",{},this.timeout).catch(()=>null);this.tools=(await this.listTools()).tools||[];return{tools:this.tools}}
+ async listTools(){if(!this.child)throw Error("MCP client is not connected");return rpc(this.child,"tools/list",{},this.timeout)}
+ async callTool(name,arguments={}){if(!this.child)throw Error("MCP client is not connected");if(!this.tools.some(t=>t.name===name))throw Error("MCP tool not advertised: "+name);return rpc(this.child,"tools/call",{name,arguments},this.timeout)}
+ close(){if(this.child){this.child.kill();this.child=null}}
 }
-export function startMcpServer(command,args=[]){
- const child=spawn(String(command),Array.isArray(args)?args:[],{stdio:["pipe","pipe","pipe"],shell:false});
- return {
-  async initialize(){return rpc(child,"initialize",{protocolVersion:"2025-06-18",capabilities:{},clientInfo:{name:"nexora",version:"1.0"}})},
-  async listTools(){return rpc(child,"tools/list",{},2)},
-  async callTool(name,arguments={}){return rpc(child,"tools/call",{name,arguments},3)},
-  close(){child.kill()}
- };
-}
+export function startMcpServer(command,args=[],opts={}){const client=new McpClient(command,args,opts);return{initialize:()=>client.connect(),listTools:()=>client.listTools(),callTool:(name,arguments)=>client.callTool(name,arguments),close:()=>client.close()}}
