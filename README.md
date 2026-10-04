@@ -60,6 +60,15 @@ No universal LiteRT-LM command or model flag is assumed.
 pytest -q
 ```
 
+## Dashboard authentication
+If `NEXORA_API_TOKEN` is non-empty in `.env`, enter the same value in the dashboard's API access token field. The dashboard keeps the token only in page memory; it is not persisted to local storage. The health endpoint is intentionally public, while application endpoints require the bearer token.
+
+## V1.1 dashboard updates
+- Enter an optional bearer token for protected endpoints.
+- Propose instruction-only skills from the dashboard.
+- Run static checks, approve/reject, and mark a skill rolled back.
+- CI runs the Python test suite and builds the frontend separately.
+
 ## Security
 Keep secrets, model files, and the SQLite database out of version control. Review skills before approval. Approval never enables generated code execution. Back up the database before upgrades. V1 is not intended for safety-critical autonomous control.
 
