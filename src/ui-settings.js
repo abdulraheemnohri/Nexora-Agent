@@ -61,7 +61,7 @@ export function resetUiSettingsSection(section) {
   const current=readFile();
   current[section]=base[section];
   const file=filename(),tmp=file+".tmp";
-  fs.writeFileSync(tmp,JSON.stringify(current,null,2)+"\\n",{mode:0o600});
+  fs.writeFileSync(tmp,JSON.stringify(current,null,2)+"\n",{mode:0o600});
   fs.renameSync(tmp,file);
   return safe(current);
 }
