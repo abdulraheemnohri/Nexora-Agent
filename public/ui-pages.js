@@ -69,6 +69,8 @@
     const id="setting-"+section+"-"+key, label=key.replace(/([A-Z])/g," $1").replace(/^./,x=>x.toUpperCase());
     if(typeof value==="boolean")return '<label class="cap-check"><input type="checkbox" id="'+id+'" data-section="'+section+'" data-key="'+key+'" '+(value?"checked":"")+'><span>'+esc(label)+'</span></label>';
     if(Array.isArray(value))return textarea(label,id,"JSON array",JSON.stringify(value)).replace("<textarea ","<textarea data-section=\""+section+"\" data-key=\""+key+"\" ");
+    const choices={approvalMode:["ask","safe","trusted"],theme:["dark","light","system"],fallbackPolicy:["never","manual"],level:["debug","info","warn","error"]};
+    if(choices[key])return '<label class="cap-field"><span>'+esc(label)+'</span><select id="'+id+'" data-section="'+section+'" data-key="'+key+'">'+choices[key].map(x=>'<option value="'+x+'" '+(x===value?"selected":"")+' >'+x+'</option>').join("")+'</select></label>';
     return field(label,id,"",value,typeof value==="number"?"number":"text").replace('<input ','<input data-section="'+section+'" data-key="'+key+'" ');
   }
   async function settings(){
