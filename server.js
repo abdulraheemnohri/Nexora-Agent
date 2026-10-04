@@ -22,7 +22,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&u.pathname==="/")return sendFile(res,"public/index.html","text/html");
  if(req.method==="GET"&&u.pathname==="/app.js")return sendFile(res,"public/app.js","text/javascript");
  if(req.method==="GET"&&u.pathname==="/style.css")return sendFile(res,"public/style.css","text/css");
- if(req.method==="GET"&&u.pathname==="/api/health")return json(res,200,{ok:true,name:"Nexora",version:"1.4.0",platform:process.platform,node:process.version});
+ if(req.method==="GET"&&u.pathname==="/api/health")return json(res,200,{ok:true,name:"Nexora",version:"1.6.0",platform:process.platform,node:process.version});
  if(req.method==="GET"&&u.pathname==="/api/events"&&!authorized(req)&&u.searchParams.get("token")!==process.env.NEXORA_API_TOKEN)return json(res,401,{error:"Unauthorized"});\n if(!authorized(req))return json(res,401,{error:"Unauthorized"});
 
  if(req.method==="GET"&&u.pathname==="/api/events"){res.writeHead(200,{"content-type":"text/event-stream","cache-control":"no-cache","connection":"keep-alive"});res.write("event: ready\\ndata: {}\\n\\n");const off=subscribe(res);req.on("close",off);return}
@@ -46,8 +46,8 @@ const server=http.createServer(async(req,res)=>{try{
  const dm=u.pathname.match(/^\/api\/tasks\/([^/]+)\/(children|aggregate|retry)$/);if(dm&&req.method==="GET"&&dm[2]!=="retry")return json(res,200,dm[2]==="children"?delegation.children(dm[1]):delegation.aggregate(dm[1]));
  if(dm&&req.method==="POST"&&dm[2]==="retry")return json(res,202,agent.retry(dm[1]));
  if(req.method==="GET"&&u.pathname==="/api/audit")return json(res,200,state.audit.slice().reverse());
- if(req.method==="POST"&&u.pathname==="/api/webhooks/telegram")return json(res,200,{ok:true});
- if(req.method==="POST"&&u.pathname==="/api/webhooks/whatsapp")return json(res,200,{ok:true});
+ if(req.method==="POST"&&u.pathname==="/api/webhooks/telegram")return json(res,501,{ok:false,error:"Telegram channel adapter is not configured"});
+ if(req.method==="POST"&&u.pathname==="/api/webhooks/whatsapp")return json(res,501,{ok:false,error:"WhatsApp channel adapter is not configured"});
  return json(res,404,{error:"Not found"});
 }catch(e){return json(res,e.status||500,{error:e.message});}});
 server.listen(Number(process.env.PORT||8787),process.env.HOST||"127.0.0.1",()=>console.log("Nexora Agent running"));
