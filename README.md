@@ -75,3 +75,38 @@ Keep secrets, model files, and the SQLite database out of version control. Revie
 ## Roadmap
 V1.1: durable task queue, provider health checks, dashboard auth support, structured evaluation sets, and GitHub Actions CI. Later: isolated code experiments with mandatory tests, explicit approval, versioned artifacts, and rollback.
 \n## AI providers\nNexora now has a single gateway for local LiteRT-LM plus Claude and configurable cloud providers: OpenAI, Gemini, Groq, OpenRouter, Together, and Mistral. The OpenAI-compatible adapters use each provider's configured base URL and model; keys remain in `.env`. Gemini uses Google's `generateContent` REST interface. citeturn0search0turn0search1\n\nSet `NEXORA_DEFAULT_PROVIDER` to one of the configured provider IDs. Cloud calls are explicit; Nexora does not silently switch away from local inference.\n\n## Messaging channels\n### Telegram\n1. Create a bot with BotFather and set `NEXORA_TELEGRAM_BOT_TOKEN`.\n2. Set `NEXORA_TELEGRAM_ENABLED=true`.\n3. Point Telegram's webhook at `POST /v1/channels/telegram/webhook`.\n4. Nexora receives text messages, sends them through the gateway, and replies with the selected provider.\n\n### WhatsApp Cloud API\nSet `NEXORA_WHATSAPP_ENABLED=true`, `NEXORA_WHATSAPP_ACCESS_TOKEN`, `NEXORA_WHATSAPP_PHONE_NUMBER_ID`, and `NEXORA_WHATSAPP_VERIFY_TOKEN`. Configure Meta's webhook verification against `GET /v1/channels/whatsapp/webhook` and message delivery against `POST /v1/channels/whatsapp/webhook`. Nexora parses inbound text messages and replies through the WhatsApp Cloud API.\n\nKeep webhook endpoints behind HTTPS and a reverse proxy in production. Do not expose the local development server directly to the public Internet.\n
+## Mobile system
+
+Nexora now includes an Android companion under `mobile/`. It is designed as an edge client for the Debian/Linux Nexora gateway and provides a Compose UI plus a foreground-service foundation for long-running status/voice work.
+
+The architecture is:
+
+```
+Android phone
+   ├─ Chat / notifications / voice controls
+   └─ future device tools
+          │ HTTPS + bearer auth
+          ▼
+Nexora Gateway on Debian/Linux
+   ├─ Agent runtime
+   ├─ memory / skills / audit
+   ├─ provider router
+   └─ LiteRT-LM CLI adapter
+          │
+          ├─ local LiteRT-LM
+          ├─ Claude
+          ├─ OpenAI
+          ├─ Gemini
+          ├─ Groq
+          ├─ OpenRouter
+          ├─ Together
+          └─ Mistral
+```
+
+The mobile project is a foundation, not a claim that every Android device-control capability is already implemented. Android's background-service restrictions must be respected, especially for microphone/voice functionality. The platform requires foreground-service handling and appropriate permissions on recent Android versions.
+
+## Hermes-style capability map
+
+`GET /v1/features` exposes the current implementation status of the Nexora capability surface. Active components include memory, skills, API, Telegram, WhatsApp, and the Android foundation. More advanced Hermes-style capabilities—browser automation, delegation, voice, wake word, cron, MCP, terminal/file tools, profiles, and batch evaluation—are explicitly tracked as planned rather than falsely presented as complete.
+
+Nexora is implementing these capabilities independently rather than copying Hermes source code.
