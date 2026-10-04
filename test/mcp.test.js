@@ -6,7 +6,7 @@ const mockServer = String.raw`process.stdin.setEncoding("utf8");
 let buffer = "";
 process.stdin.on("data", chunk => {
   buffer += chunk;
-  const lines = buffer.split("\\n");
+  const lines = buffer.split("\n");
   buffer = lines.pop();
   for (const line of lines) {
     if (!line.trim()) continue;
@@ -21,7 +21,7 @@ process.stdin.on("data", chunk => {
     } else if (message.method === "tools/call") {
       result = { content: [{ type: "text", text: JSON.stringify(message.params.arguments) }], isError: false };
     }
-    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result }) + "\\n");
+    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result }) + "\n");
   }
 });`;
 
