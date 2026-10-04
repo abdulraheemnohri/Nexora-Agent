@@ -36,7 +36,7 @@
   async function memory(){
     const q=new URLSearchParams(location.search).get("q")||"";
     const items=q?await api("/api/memory?q="+encodeURIComponent(q)+"&limit=100"):(await api("/api/state")).memory||[];
-    view.innerHTML=card("Memory explorer",'<form id="memory-search-form">'+field("Search memory","memory-query","Search stored notes",q)+'<button class="icon-btn" type="submit">Search</button></form><form id="memory-add-form">'+textarea("New memory","memory-content","Write a note to remember")+'<button class="primary" type="submit">Save memory</button></form>')+card("Stored entries",(items||[]).map(m=>'<div class="task-row"><div><b>'+esc(m.title||m.meta?.title||"Memory entry")+'</b><small>'+esc(m.createdAt||"")+'</small><p>'+esc(m.content||m.text||JSON.stringify(m))+'</p></div></div>').join("")||'<p class="muted">No matching memory entries.</p>');
+    view.innerHTML=card("Memory explorer",'<form id="memory-search-form">'+field("Search memory","memory-query","Search stored notes",q)+'<button class="icon-btn" type="submit">Search</button></form><form id="memory-add-form">'+textarea("New memory","memory-content","Write a note to remember")+'<button class="primary" type="submit">Save memory</button></form>')+card("Stored entries",(items||[]).map(m=>'<div class="task-row"><div><b>'+esc(m.title||m.meta?.title||"Memory entry")+'</b><small>'+esc(m.createdAt||"")+'</small><p>'+esc(m.content||m.text||JSON.stringify(m))+'</p></div><div class="task-actions">'+button("Archive","memory-archive",m.id,"cancel")+button("Delete","memory-delete",m.id,"cancel")+'</div></div>').join("")||'<p class="muted">No matching memory entries.</p>');
   }
   async function models(){
     const result=await api("/api/models"),list=result.models||[];
