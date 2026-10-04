@@ -1,5 +1,7 @@
 import "dotenv/config";
 import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
 import {URL} from "node:url";
 import {Agent} from "./src/agent.js";
 import {providers} from "./src/providers.js";
@@ -33,6 +35,14 @@ const queue=new TaskQueue(agent,{concurrency:config.maxConcurrentTasks||2,maxRet
 agent.setQueue(queue);
 const scheduler=new Scheduler(state,saveState,queue);
 const delegation=new Delegation(state,saveState,queue,{maxDelegationDepth:Number(process.env.NEXORA_MAX_DELEGATION_DEPTH||2),maxChildTasks:Number(process.env.NEXORA_MAX_CHILD_TASKS||4)});
+function applyUiRuntimeSettings(s){
+ if(s.general?.workspace){config.workspace=path.resolve(config.root,s.general.workspace);fs.mkdirSync(config.workspace,{recursive:true});agent.config.workspace=config.workspace;}
+ if(Number.isFinite(Number(s.ai?.maxSteps))){config.maxAgentSteps=Number(s.ai.maxSteps);agent.config.maxAgentSteps=config.maxAgentSteps;}
+ const approval=s.permissions?.approvalMode||s.terminal?.approvalMode||"ask";config.approvalMode=approval;config.security.approvalMode=approval;agent.config.security={...(agent.config.security||{}),approvalMode:approval};
+ if(Number.isFinite(Number(s.scheduler?.maxConcurrentTasks)))queue.concurrency=Math.max(1,Number(s.scheduler.maxConcurrentTasks));
+ if(Number.isFinite(Number(s.scheduler?.maxRetries)))queue.maxRetries=Math.max(0,Number(s.scheduler.maxRetries));
+}
+applyUiRuntimeSettings(getUiSettings());
 scheduler.restore();
 queue.start();
 for(const m of listMcpServers().filter(x=>x.enabled!==false)){try{await agent.registry.addMcpServer(m.name,m.command,m.args,{timeout:m.timeout})}catch(e){audit(state,{event:"mcp_start_failed",server:m.name,error:e.message})}}
@@ -76,8 +86,8 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&u.pathname==="/api/tools")return json(res,200,toolsStatus());
  if(req.method==="GET"&&u.pathname==="/api/toolsets")return json(res,200,toolsetsStatus());
  if(req.method==="GET"&&u.pathname==="/api/settings")return json(res,200,getUiSettings());
- if(req.method==="PUT"&&u.pathname==="/api/settings"){const b=await readBody(req);const updated=updateUiSettings(b);audit(state,{event:"ui_settings_updated",sections:Object.keys(b)});await saveState(state);return json(res,200,updated)}
- const settingsReset=u.pathname.match(new RegExp("^/api/settings/([^/]+)$"));if(settingsReset&&req.method==="DELETE"){const updated=resetUiSettingsSection(decodeURIComponent(settingsReset[1]));audit(state,{event:"ui_settings_reset",section:settingsReset[1]});await saveState(state);return json(res,200,updated)}
+ if(req.method==="PUT"&&u.pathname==="/api/settings"){const b=await readBody(req);const updated=updateUiSettings(b);applyUiRuntimeSettings(updated);audit(state,{event:"ui_settings_updated",sections:Object.keys(b)});await saveState(state);return json(res,200,updated)}
+ const settingsReset=u.pathname.match(new RegExp("^/api/settings/([^/]+)$"));if(settingsReset&&req.method==="DELETE"){const updated=resetUiSettingsSection(decodeURIComponent(settingsReset[1]));applyUiRuntimeSettings(updated);audit(state,{event:"ui_settings_reset",section:settingsReset[1]});await saveState(state);return json(res,200,updated)}
  if(req.method==="GET"&&u.pathname==="/api/config"){const safeConfig=Object.fromEntries(Object.entries(config).filter(([k])=>!/(key|secret|token|password)/i.test(k)));safeConfig.anthropicConfigured=Boolean(config.anthropicKey);safeConfig.compatibleConfigured=Boolean(config.compatibleKey);return json(res,200,safeConfig)}
  if(req.method==="GET"&&u.pathname==="/api/state")return json(res,200,{memory:state.memory,skills:state.skills,tasks:state.tasks,schedules:state.schedules,audit:state.audit,queue:queue.snapshot()});
  if(req.method==="GET"&&u.pathname==="/api/memory")return json(res,200,memory.search(u.searchParams.get("q")||"",Number(u.searchParams.get("limit")||20)));
