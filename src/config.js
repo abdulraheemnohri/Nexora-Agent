@@ -7,6 +7,7 @@ export function loadConfig(){
  return{
   root,host:env("NEXORA_HOST","127.0.0.1"),port:Number(env("NEXORA_PORT",8787)),workspace,data,
   approvalMode:env("NEXORA_APPROVAL_MODE","ask"),terminalMode:env("NEXORA_TERMINAL_MODE","ask"),
+  security:{approvalMode:env("NEXORA_APPROVAL_MODE","ask")},
   providerMode:env("NEXORA_PROVIDER_MODE","manual"),provider:env("NEXORA_PROVIDER","litert"),
   maxAgentSteps:Number(env("NEXORA_MAX_AGENT_STEPS",20)),maxConcurrentTasks:Number(env("NEXORA_MAX_CONCURRENT_TASKS",2)),
   anthropicKey:env("ANTHROPIC_API_KEY",""),anthropicModel:env("ANTHROPIC_MODEL",""),
