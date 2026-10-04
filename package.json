@@ -1,1 +1,1 @@
-{"name":"nexora-agent","version":"1.6.0","type":"module","private":true,"bin":{"nexora":"./bin/nexora.js"},"scripts":{"start":"node server.js","worker":"node src/worker.js","test":"node --test \"test/**/*.test.js\""},"engines":{"node":">=18"},"dependencies":{}}
+{"name":"nexora-agent","version":"1.6.0","type":"module","private":true,"bin":{"nexora":"./bin/nexora.js"},"scripts":{"start":"node server.js","worker":"node src/worker.js","test":"node --test \"test/**/*.test.js\""},"engines":{"node":">=18"},"dependencies":{"dotenv":"^17.2.2"}}
