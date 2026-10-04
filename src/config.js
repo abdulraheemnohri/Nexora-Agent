@@ -18,6 +18,7 @@ export function loadConfig(){
   litertBackend:env("NEXORA_LITERT_BACKEND","auto"),
   smartMiniEnabled:env("NEXORA_SMART_MINI_ENABLED","true")==="true",
   smartMiniName:env("NEXORA_SMART_MINI_NAME","Nexora Smart Mini"),
+  activeModel:env("NEXORA_ACTIVE_MODEL","smart-mini"),
   compatibleUrl:env("OPENAI_COMPATIBLE_URL",""),compatibleKey:env("OPENAI_COMPATIBLE_API_KEY",""),compatibleModel:env("OPENAI_COMPATIBLE_MODEL","")
  };
 }
