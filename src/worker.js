@@ -1,0 +1,1 @@
+import{spawn}from"node:child_process";const delay=ms=>new Promise(r=>setTimeout(r,ms));let stopping=false;process.on("SIGINT",()=>{stopping=true});process.on("SIGTERM",()=>{stopping=true});console.log("Nexora worker started");while(!stopping){await delay(Number(process.env.NEXORA_WORKER_POLL_MS||2000));}console.log("Nexora worker stopped");
