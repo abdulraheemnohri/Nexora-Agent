@@ -27,6 +27,7 @@ test("UI settings persist validated values",()=>{
 test("UI settings reject unknown sections and invalid value types",()=>{
   assert.throws(()=>updateUiSettings({unknown:{enabled:true}}),/Unknown settings section/);
   assert.throws(()=>updateUiSettings({general:{compactMode:"yes"}}),/Invalid type/);
+  assert.throws(()=>updateUiSettings({permissions:{approvalMode:"unrestricted"}}),/Invalid value/);
 });
 
 test("UI settings can reset a section to defaults",()=>{
