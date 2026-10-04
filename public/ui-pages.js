@@ -35,7 +35,7 @@
   }
   async function memory(){
     const q=new URLSearchParams(location.search).get("q")||"";
-    const items=q?await api("/api/memory?q="+encodeURIComponent(q)+"&limit=100"):(await api("/api/state")).memory||[];
+    const items=q?await api("/api/memory?q="+encodeURIComponent(q)+"&limit=100"):((await api("/api/state")).memory||[]).filter(m=>!m.archived);
     view.innerHTML=card("Memory explorer",'<form id="memory-search-form">'+field("Search memory","memory-query","Search stored notes",q)+'<button class="icon-btn" type="submit">Search</button></form><form id="memory-add-form">'+textarea("New memory","memory-content","Write a note to remember")+'<button class="primary" type="submit">Save memory</button></form>')+card("Stored entries",(items||[]).map(m=>'<div class="task-row"><div><b>'+esc(m.title||m.meta?.title||"Memory entry")+'</b><small>'+esc(m.createdAt||"")+'</small><p>'+esc(m.content||m.text||JSON.stringify(m))+'</p></div><div class="task-actions">'+button("Archive","memory-archive",m.id,"cancel")+button("Delete","memory-delete",m.id,"cancel")+'</div></div>').join("")||'<p class="muted">No matching memory entries.</p>');
   }
   async function models(){
@@ -110,7 +110,7 @@
       if(a==="task-approve"||a==="task-cancel"){await api("/api/tasks/"+encodeURIComponent(id)+"/"+(a==="task-approve"?"approve":"cancel"),{method:"POST",body:"{}"});toast("Task action complete");render("tasks");return}
       if(a==="task-retry"){await api("/api/tasks/"+encodeURIComponent(id)+"/retry",{method:"POST",body:"{}"});toast("Retry queued");render("tasks");return}
       if(a==="open-task"){render("tasks");return}
-      if(a==="model-test"||a==="model-use"||a==="model-install"){const op=a.slice(6);const result=await api("/api/models/"+encodeURIComponent(id)+"/"+op,{method:"POST",body:"{}"});toast("Model "+op+" request finished");const target=view.querySelector(".card");if(target)target.insertAdjacentHTML("beforeend",'<pre>'+esc(JSON.stringify(result,null,2))+'</pre>');return}
+      if(a==="model-test"||a==="model-use"||a==="model-install"){const op=a.slice(6);const result=await api("/api/models/"+encodeURIComponent(id)+"/"+op,{method:"POST",body:"{}"});toast(op==="use"?"Active model updated":op==="test"?(result.ok?"Model test passed":"Model test did not pass"):"Runtime check completed");await render("models");const target=view.querySelector(".card");if(target)target.insertAdjacentHTML("beforeend",'<pre>'+esc(JSON.stringify(result,null,2))+'</pre>');return}
       if(a==="memory-archive"){await api("/api/memory/"+encodeURIComponent(id)+"/archive",{method:"POST",body:"{}"});toast("Memory archived");render("memory");return}
       if(a==="memory-delete"){if(!confirm("Permanently delete this memory entry?"))return;await api("/api/memory/"+encodeURIComponent(id),{method:"DELETE",body:"{}"});toast("Memory deleted");render("memory");return}
       if(a==="schedule-cancel"){await api("/api/schedules/"+encodeURIComponent(id)+"/cancel",{method:"POST",body:"{}"});toast("Schedule cancelled");render("schedules");return}
