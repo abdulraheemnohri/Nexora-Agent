@@ -54,3 +54,14 @@ export function updateUiSettings(input={}) {
   fs.renameSync(tmp,file);
   return safe(current);
 }
+
+export function resetUiSettingsSection(section) {
+  const base=defaults();
+  if(!Object.hasOwn(base,section)) throw Error("Unknown settings section: "+section);
+  const current=readFile();
+  current[section]=base[section];
+  const file=filename(),tmp=file+".tmp";
+  fs.writeFileSync(tmp,JSON.stringify(current,null,2)+"\\n",{mode:0o600});
+  fs.renameSync(tmp,file);
+  return safe(current);
+}
