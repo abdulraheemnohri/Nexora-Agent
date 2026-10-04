@@ -35,12 +35,12 @@
   }
   async function memory(){
     const q=new URLSearchParams(location.search).get("q")||"";
-    const items=await api("/api/memory?q="+encodeURIComponent(q)+"&limit=100");
+    const items=q?await api("/api/memory?q="+encodeURIComponent(q)+"&limit=100"):(await api("/api/state")).memory||[];
     view.innerHTML=card("Memory explorer",'<form id="memory-search-form">'+field("Search memory","memory-query","Search stored notes",q)+'<button class="icon-btn" type="submit">Search</button></form><form id="memory-add-form">'+textarea("New memory","memory-content","Write a note to remember")+'<button class="primary" type="submit">Save memory</button></form>')+card("Stored entries",(items||[]).map(m=>'<div class="task-row"><div><b>'+esc(m.title||m.meta?.title||"Memory entry")+'</b><small>'+esc(m.createdAt||"")+'</small><p>'+esc(m.content||m.text||JSON.stringify(m))+'</p></div></div>').join("")||'<p class="muted">No matching memory entries.</p>');
   }
   async function models(){
-    const list=await api("/api/models");
-    view.innerHTML=card("Model manager",heading("Local inference","Model actions depend on the installed LiteRT-LM runtime and model catalog. The UI reports backend results instead of pretending a download succeeded.")+(list||[]).map(m=>'<div class="task-row"><div><b>'+esc(m.name||m.id)+'</b><small>'+esc(m.id)+' · '+esc(m.runtime||m.backend||"runtime not reported")+'</small><small>'+esc(m.description||m.status||"")+'</small></div><div class="task-actions">'+button("Test","model-test",m.id)+button("Use","model-use",m.id,"approve")+button("Install / prepare","model-install",m.id)+'</div></div>').join("")||'<p class="muted">No models returned by the model catalog.</p>');
+    const result=await api("/api/models"),list=result.models||[];
+    view.innerHTML=card("Model manager",heading("Local inference","Model actions depend on the installed LiteRT-LM runtime and model catalog. The UI reports backend results instead of pretending a download succeeded.")+"<p class=\"muted\">Active model: "+esc(result.active||"unknown")+"</p>"+(list||[]).map(m=>'<div class="task-row"><div><b>'+esc(m.name||m.id)+'</b><small>'+esc(m.id)+' · '+esc(m.runtime||m.backend||"runtime not reported")+'</small><small>'+esc(m.description||m.status||"")+'</small></div><div class="task-actions">'+button("Test","model-test",m.id)+button("Use","model-use",m.id,"approve")+button("Install / prepare","model-install",m.id)+'</div></div>').join("")||'<p class="muted">No models returned by the model catalog.</p>');
   }
   async function schedules(){
     const state=await api("/api/state"),list=state.schedules||[];
@@ -76,6 +76,7 @@
     const tabs=Object.keys(sectionNames).map(k=>'<button class="mini '+(k==="general"?"approve":"")+'" data-ui-action="settings-section" data-id="'+k+'">'+sectionNames[k]+'</button>').join("");
     const blocks=Object.entries(sectionNames).map(([key,label])=>card(label,'<form class="settings-form" data-section-form="'+key+'">'+Object.entries(settingsCache[key]||{}).map(([k,v])=>settingsField(key,k,v)).join("")+'<div class="cap-actions"><button class="primary" type="submit">Save '+label+'</button><button class="icon-btn" type="button" data-ui-action="settings-reset" data-id="'+key+'">Reset section</button></div></form>')).join("");
     view.innerHTML=card("Settings center",'<p class="muted">Preferences are persisted locally on the Nexora host. Provider credentials and bot tokens are deliberately excluded; configure those through environment variables. Some preferences are descriptive until a runtime component explicitly consumes them.</p><div class="cap-actions">'+tabs+'</div><input id="settings-filter" placeholder="Filter settings…" class="settings-filter">')+blocks;
+    document.querySelectorAll("[data-section-form]").forEach(f=>f.closest(".card").style.display=f.dataset.sectionForm==="general"?"":"none");
     const filter=document.querySelector("#settings-filter");
     filter.oninput=()=>{const q=filter.value.toLowerCase();view.querySelectorAll("[data-section-form]").forEach(form=>{const matches=form.textContent.toLowerCase().includes(q)||form.dataset.sectionForm.includes(q);form.closest(".card").style.display=matches?"":"none"})};
   }
