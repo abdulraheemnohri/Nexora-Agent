@@ -1,20 +1,74 @@
 # Nexora Mobile
 
-Android companion for the Nexora gateway. The Debian/Linux machine can run the full agent and LiteRT-LM CLI while Android provides chat, notifications, voice/session controls, and future device tools.
+Nexora Mobile is an Android edge console for a Nexora Agent runtime. It is intentionally split into two layers:
 
-## Build
+- **APK:** gateway configuration, agent UI, device-control surface, and Termux handoff.
+- **Termux:** the actual Linux-like terminal runtime used to install/run the Python Nexora agent on Android.
 
-    cd mobile
-    ./gradlew :app:assembleDebug
+A normal Android APK is sandboxed and is not a general Linux distribution. This project therefore does not fake a shell by running arbitrary commands inside the APK. Termux provides the terminal environment, while Termux:API can expose selected Android functions to command-line programs. citeturn0search10
 
-Android Studio can open the `mobile` directory directly.
+## Install Nexora on Android
 
-## Architecture
+1. Install a current Termux build from a trusted source.
+2. Open Termux.
+3. Run:
 
-Android -> authenticated Nexora Gateway -> local LiteRT-LM / cloud providers.
+```bash
+curl -fsSL https://raw.githubusercontent.com/abdulraheemnohri/Nexora-Agent/main/mobile/termux/install-nexora.sh | bash
+```
 
-For a real phone, replace the development `10.0.2.2:8000` URL with the gateway's HTTPS address and configure a bearer token. Do not expose an unauthenticated FastAPI development server to the Internet.
+4. Activate:
 
-## Background behavior
+```bash
+source ~/.nexora/Nexora-Agent/.venv/bin/activate
+```
 
-The foreground service is only a foundation for long-running agent status/voice work. Android 12+ restricts background foreground-service starts and Android 14+ adds service-type permission requirements, so the app must request/start the service from an allowed user-visible flow.
+5. Check:
+
+```bash
+nexora status
+```
+
+The installer uses Termux's package manager, Python virtual environment, and Git. It does not use Docker or a proot Linux distribution.
+
+## Mobile architecture
+
+```
+Nexora Mobile APK
+      │
+      ├── Agent UI
+      ├── Gateway URL + bearer token
+      ├── Device controls (explicit approval)
+      └── Termux handoff
+              │
+              ▼
+       Termux Linux runtime
+              │
+              ▼
+        Nexora Agent CLI
+              │
+              ▼
+       Nexora Gateway / models
+```
+
+## Device automation
+
+For screen inspection and user-authorized interaction, Nexora can later use Android's Accessibility Service framework. Android documents this as a specialized background service for inspecting screen content and interacting with apps on the user's behalf; it requires explicit platform configuration and authorization. citeturn0search14
+
+## Hermes-style roadmap
+
+Hermes currently documents persistent memory, skills, terminal/file tools, browser automation, scheduled tasks, delegation, voice, MCP, messaging, checkpoints, and related toolsets. citeturn0search0turn0search1
+
+Nexora's implementation roadmap is:
+
+1. **Core agent:** gateway, memory, skills, checkpoints, provider router.
+2. **Tools:** terminal, file operations, web search/extraction, browser, vision, code execution.
+3. **Automation:** cron/scheduled tasks, background workers, task queues, retries.
+4. **Multi-agent:** isolated sub-agents and explicit tool/permission profiles.
+5. **Channels:** Telegram, WhatsApp, then additional adapters.
+6. **Mobile:** Termux runtime, notifications, voice, device tools, optional Accessibility Service.
+7. **MCP:** allowlisted MCP servers and tool discovery.
+8. **Evaluation:** batch runs, traces, regression datasets, and rollback.
+9. **Self-growth:** memory distillation → skill proposal → tests → human approval → versioned skill → measured reuse.
+
+Nexora is implementing these capabilities independently rather than copying Hermes source code.
