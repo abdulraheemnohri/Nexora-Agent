@@ -25,8 +25,16 @@ const filename = () => path.resolve(process.env.NEXORA_DATA || "data", "ui-setti
 function readFile() {
   const file=filename(); fs.mkdirSync(path.dirname(file),{recursive:true});
   if(!fs.existsSync(file)) return defaults();
-  try { return { ...defaults(), ...JSON.parse(fs.readFileSync(file,"utf8")) }; }
-  catch { return defaults(); }
+  try {
+    const base=defaults(), saved=JSON.parse(fs.readFileSync(file,"utf8"));
+    if(!saved || typeof saved!=="object" || Array.isArray(saved)) return base;
+    for(const [section, values] of Object.entries(saved)) {
+      if(Object.hasOwn(base,section) && values && typeof values==="object" && !Array.isArray(values)) {
+        base[section]={...base[section],...values};
+      }
+    }
+    return base;
+  } catch { return defaults(); }
 }
 function safe(value) {
   if(Array.isArray(value)) return value.map(safe);
@@ -45,9 +53,30 @@ export function updateUiSettings(input={}) {
       if(secretLike.test(key)) throw Error("Secrets must be configured through environment variables, not UI settings.");
       const template=allowed[section][key];
       if(typeof value!==typeof template && value!==null) throw Error("Invalid type for setting: "+section+"."+key);
-      const choices={approvalMode:["ask","safe","trusted"],theme:["dark","light","system"],fallbackPolicy:["never","manual"],level:["debug","info","warn","error"]};
-      if(choices[key]&&!choices[key].includes(value))throw Error("Invalid value for setting: "+section+"."+key);
-      if(typeof value==="number" && (!Number.isFinite(value)||value<0)) throw Error("Setting must be a non-negative number: "+key);
+      const choices={
+        "permissions.approvalMode":["ask","safe","trusted"],
+        "general.theme":["dark","light","system"],
+        "providers.fallbackPolicy":["never","manual"],
+        "logging.level":["debug","info","warn","error"]
+      };
+      const settingKey=section+"."+key;
+      if(choices[settingKey]&&!choices[settingKey].includes(value))throw Error("Invalid value for setting: "+settingKey);
+      if(typeof value==="number") {
+        const bounds={
+          "models.maxSteps":[1,200],"models.temperature":[0,2],"models.contextLimit":[256,1048576],
+          "terminal.timeoutSeconds":[1,3600],"terminal.maxOutputKb":[1,65536],
+          "tools.maxParallelTools":[1,32],"memory.retentionDays":[0,36500],"memory.maxItems":[1,1000000],
+          "scheduler.maxConcurrentTasks":[1,64],"scheduler.maxRetries":[0,20],"scheduler.pollIntervalMs":[100,3600000],
+          "scheduler.keepHistoryDays":[0,36500],"security.rateLimitPerMinute":[1,100000],
+          "security.sessionTimeoutMinutes":[1,10080],"network.requestTimeoutSeconds":[1,3600],
+          "network.maxResponseKb":[1,1048576],"mcp.defaultTimeoutMs":[100,300000],
+          "logging.maxLogMb":[1,10240],"backups.retentionCount":[0,1000],
+          "system.healthCheckSeconds":[1,3600]
+        };
+        const range=bounds[settingKey];
+        if(!Number.isFinite(value)||value<0) throw Error("Setting must be a non-negative number: "+settingKey);
+        if(range&&(value<range[0]||value>range[1])) throw Error("Setting is outside the allowed range: "+settingKey);
+      }
       if(typeof value==="string" && value.length>2000) throw Error("Setting is too long: "+key);
       current[section][key]=value;
     }
