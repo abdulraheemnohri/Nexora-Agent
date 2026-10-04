@@ -18,6 +18,7 @@ import {TaskQueue} from "./src/task-queue.js";
 import {Delegation} from "./src/delegation.js";
 import {listModels,modelStatus,installModel,testModel,useModel} from "./src/litert-models.js";
 import {listMcpServers,addMcpServer,removeMcpServer,getMcpServer} from "./src/mcp-registry.js";
+import {mcpServerSummary} from "./src/mcp-status.js";
 import {listSources,addSource,inspect,importSkill,hermesOfficialCatalog} from "./src/skill-library.js";
 import {listPresets,getPreset} from "./src/provider-presets.js";
 import {discoverProviderModels,testProviderConnection} from "./src/provider-discovery.js";
@@ -56,6 +57,7 @@ const server=http.createServer(async(req,res)=>{try{
  const pmodels=u.pathname.match(/^\\/api\\/providers\\/([^/]+)\\/models$/);if(pmodels&&req.method==="GET")return json(res,200,await discoverProviderModels(decodeURIComponent(pmodels[1])));\n const pm=u.pathname.match(/^\/api\/providers\/([^/]+)(?:\/(use|test))?$/);if(pm){const id=decodeURIComponent(pm[1]);if(req.method==="DELETE"&&!pm[2])return json(res,200,{removed:removeProvider(id)});if(req.method==="PUT"&&!pm[2]){const b=await readBody(req);return json(res,200,updateProvider(id,b))}if(req.method==="POST"&&pm[2]==="use")return json(res,200,useProvider(id));if(req.method==="POST"&&pm[2]==="test"){const b=await readBody(req);return json(res,200,await testProviderConnection(id,String(b.prompt||"Reply with exactly: NEXORA_PROVIDER_OK")))}} 
 
  if(req.method==="GET"&&u.pathname==="/api/mcp")return json(res,200,listMcpServers());
+ if(req.method==="GET"&&u.pathname==="/api/mcp/status")return json(res,200,mcpServerSummary(listMcpServers(),agent.registry.mcpList()));
  if(req.method==="POST"&&u.pathname==="/api/mcp"){const b=await readBody(req);const m=addMcpServer(b);await agent.registry.addMcpServer(m.name,m.command,m.args,{timeout:m.timeout});audit(state,{event:"mcp_added",server:m.name});await saveState(state);return json(res,201,{...m,tools:agent.registry.mcpList()})}
  const mc=u.pathname.match(/^\/api\/mcp\/([^/]+)$/);if(mc){const name=decodeURIComponent(mc[1]);if(req.method==="DELETE"){agent.registry.removeMcpServer(name);return json(res,200,{removed:removeMcpServer(name)})}if(req.method==="POST"){const m=getMcpServer(name);if(!m)throw Error("MCP server not found");if(!agent.registry.mcpList().some(x=>x.server===name))await agent.registry.addMcpServer(m.name,m.command,m.args,{timeout:m.timeout});return json(res,200,{server:name,tools:agent.registry.mcpList().filter(x=>x.server===name)})}}
 
