@@ -127,5 +127,5 @@
     }catch(err){e.preventDefault();toast(err.message)}
   },true);
   const style=document.createElement("style");style.textContent='.cap-field{display:grid;gap:6px;margin:12px 0;color:var(--muted);font-size:12px}.cap-field input,.cap-field textarea,.cap-field select,.settings-filter{width:100%;background:#080d16;color:var(--text);border:1px solid #293650;border-radius:10px;padding:11px}.cap-field textarea{min-height:80px}.cap-actions,.task-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}.cap-check{display:flex;align-items:center;gap:10px;padding:8px 0;color:var(--muted)}.settings-filter{margin:10px 0 16px}.mini{border:1px solid #30405e;background:#121b2c;color:#fff;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:11px}.mini.cancel{border-color:#66404b;color:#ff9aab}.mini.approve{border-color:#3c665b;color:#8ce8c5}.task-row pre{max-width:100%;max-height:280px}';document.head.append(style);
-  render("dashboard");
+  window.NexoraUiPages={render};
 })();
