@@ -51,6 +51,7 @@ for(const m of listMcpServers().filter(x=>x.enabled!==false)){try{await agent.re
 const server=http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,`http://${req.headers.host||"localhost"}`);
  if(req.method==="GET"&&u.pathname==="/")return sendFile(res,"public/index.html","text/html");
+ if(req.method==="GET"&&/^\\/(dashboard|chat|tasks|memory|skills|providers|models|schedules|tools|channels|mcp|audit|settings|system|logs)$/.test(u.pathname))return sendFile(res,"public/index.html","text/html");
  if(req.method==="GET"&&u.pathname==="/app.js")return sendFile(res,"public/app.js","text/javascript");
  if(req.method==="GET"&&u.pathname==="/ui-pages.js")return sendFile(res,"public/ui-pages.js","text/javascript");
  if(req.method==="GET"&&u.pathname==="/style.css")return sendFile(res,"public/style.css","text/css");
