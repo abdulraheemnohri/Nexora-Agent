@@ -27,6 +27,36 @@ Nexora does not invent LiteRT-LM CLI syntax. The installed executable must be di
 
 Skills in the Skills Hub remain proposals until explicitly approved. Active skills expose a **Run skill** action that accepts a user task and queues it through the normal Nexora agent/tool policy pipeline. Skill instructions are bounded in size, logged with the skill ID and version, and do not bypass the normal tool-approval policy. Disable or roll back a skill to prevent future runs.
 
+## Hermes-compatible Node.js + HTML interface
+
+This branch adds a **Hermes-inspired, original Node.js implementation** alongside the existing HTML dashboard. It does not copy the upstream Python code and is not yet a feature-complete replacement for upstream Hermes Agent.
+
+Start the interactive terminal:
+```sh
+node bin/hermes.js
+```
+
+Install the local package command aliases:
+```sh
+npm install
+npm link
+hermes
+```
+
+Windows PowerShell can run `node .\\bin\\hermes.js` if global command linking is unavailable.
+
+Current compatibility milestone:
+- `hermes` interactive terminal entry point; `hermes setup`, `hermes doctor`, `hermes status`, and `hermes model list|use`
+- Slash commands: `/new`, `/sessions`, `/switch`, `/history`, `/undo`, `/retry`, `/model`, `/skills`, `/memory`, `/status`, `/doctor`, `/usage`, `/help`, `/exit`
+- Persistent local session transcripts with atomic writes and restrictive file permissions
+- Web dashboard Conversations page; direct chat messages can be attached to the selected saved session
+- Existing provider registry, approval-aware agent loop, task queue, skills, MCP registry, scheduler, memory, settings and audit UI remain available
+- `GET /api/providers/health` reports provider configuration and local LiteRT-LM availability without sending prompts or revealing API keys; use the explicit provider Test action for a real connectivity probe.
+
+Compatibility boundaries: slash commands are a subset, not a promise of exact upstream command behavior. Messaging gateway integrations, voice, rich TUI streaming, autonomous learning loops, all upstream tools/backends, and full upstream configuration parity are not implemented by this milestone. Do not expose the web server to an untrusted network without reviewing authentication and deployment settings.
+
+Upstream reference: [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) (MIT licensed upstream project). This branch is an independent implementation using the existing Nexora architecture; consult the upstream license and attribution terms before distributing a derivative or claiming complete compatibility.
+
 ## npm package manager
 
 npm is the package manager for JavaScript and is included with Node.js. It helps developers install, manage, share and reuse project packages. Nexora exposes an **npm Packages** dashboard page that reports the detected npm version, Node.js version, declared dependencies, project scripts, and whether `node_modules` and `package-lock.json` exist.
