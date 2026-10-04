@@ -77,7 +77,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&u.pathname==="/api/toolsets")return json(res,200,toolsetsStatus());
  if(req.method==="GET"&&u.pathname==="/api/settings")return json(res,200,getUiSettings());
  if(req.method==="PUT"&&u.pathname==="/api/settings"){const b=await readBody(req);const updated=updateUiSettings(b);audit(state,{event:"ui_settings_updated",sections:Object.keys(b)});await saveState(state);return json(res,200,updated)}
- const settingsReset=u.pathname.match(/^\\/api\\/settings\\/([^/]+)$/);if(settingsReset&&req.method==="DELETE"){const updated=resetUiSettingsSection(decodeURIComponent(settingsReset[1]));audit(state,{event:"ui_settings_reset",section:settingsReset[1]});await saveState(state);return json(res,200,updated)}
+ const settingsReset=u.pathname.match(new RegExp("^/api/settings/([^/]+)$"));if(settingsReset&&req.method==="DELETE"){const updated=resetUiSettingsSection(decodeURIComponent(settingsReset[1]));audit(state,{event:"ui_settings_reset",section:settingsReset[1]});await saveState(state);return json(res,200,updated)}
  if(req.method==="GET"&&u.pathname==="/api/config"){const safeConfig=Object.fromEntries(Object.entries(config).filter(([k])=>!/(key|secret|token|password)/i.test(k)));safeConfig.anthropicConfigured=Boolean(config.anthropicKey);safeConfig.compatibleConfigured=Boolean(config.compatibleKey);return json(res,200,safeConfig)}
  if(req.method==="GET"&&u.pathname==="/api/state")return json(res,200,{memory:state.memory,skills:state.skills,tasks:state.tasks,schedules:state.schedules,audit:state.audit,queue:queue.snapshot()});
  if(req.method==="GET"&&u.pathname==="/api/memory")return json(res,200,memory.search(u.searchParams.get("q")||"",Number(u.searchParams.get("limit")||20)));
