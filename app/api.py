@@ -5,6 +5,7 @@ from app.db import connect
 from app.gateway import Gateway
 from app.schemas import ChatRequest, MemoryCreate, SkillCreate, SkillDecision
 from app.agent.runtime import AgentRuntime
+from app.agent.queue import get_queue
 from app.learning.skills import list_skills, propose, test_skill, decide, rollback
 from app.channels.telegram import TelegramChannel
 from app.channels.whatsapp import WhatsAppCloudChannel
@@ -48,7 +49,7 @@ async def tasks():
 
 @app.post("/v1/agent/tasks", dependencies=[Depends(auth)])
 async def agent_task_create(body: ChatRequest):
-    try: return await AgentRuntime().run(body.message, body.provider)
+    try: return await get_queue().submit(body.message, body.provider)
     except Exception as exc: raise HTTPException(status_code=503, detail=str(exc))
 
 @app.get("/v1/agent/tasks/{task_id}", dependencies=[Depends(auth)])
