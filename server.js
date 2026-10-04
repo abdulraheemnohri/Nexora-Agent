@@ -8,8 +8,12 @@ import {Skills} from "./src/skills.js";
 import {Scheduler} from "./src/scheduler.js";
 import {audit} from "./src/audit.js";
 import {readBody,json,sendFile,authorized} from "./src/http.js";
+import {loadConfig} from "./src/config.js";
+import {HERMES_FEATURES,listToolsets,listTools} from "./src/hermes.js";
+import {toolsStatus,toolsetsStatus} from "./src/tool-registry.js";
 import {loadState,saveState} from "./src/store.js";
-const state=await loadState();const agent=new Agent(state,saveState);const memory=new Memory(state,saveState);const skills=new Skills(state,saveState);const scheduler=new Scheduler(state,saveState,agent);scheduler.restore();
+const state=await loadState();
+const config=await loadConfig();const agent=new Agent(state,saveState);const memory=new Memory(state,saveState);const skills=new Skills(state,saveState);const scheduler=new Scheduler(state,saveState,agent);scheduler.restore();
 const server=http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,`http://${req.headers.host||"localhost"}`);
  if(req.method==="GET"&&u.pathname==="/")return sendFile(res,"public/index.html","text/html");
@@ -18,6 +22,10 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&u.pathname==="/api/health")return json(res,200,{ok:true,name:"Nexora",version:"1.2.0",platform:process.platform,node:process.version});
  if(!authorized(req))return json(res,401,{error:"Unauthorized"});
  if(req.method==="GET"&&u.pathname==="/api/providers")return json(res,200,await providers.status());
+ if(req.method==="GET"&&u.pathname==="/api/features")return json(res,200,{features:HERMES_FEATURES,toolsets:listToolsets(),tools:listTools()});
+ if(req.method==="GET"&&u.pathname==="/api/tools")return json(res,200,toolsStatus());
+ if(req.method==="GET"&&u.pathname==="/api/toolsets")return json(res,200,toolsetsStatus());
+ if(req.method==="GET"&&u.pathname==="/api/config")return json(res,200,config);
  if(req.method==="GET"&&u.pathname==="/api/state")return json(res,200,{memory:state.memory,skills:state.skills,tasks:state.tasks,schedules:state.schedules,audit:state.audit});
  if(req.method==="GET"&&u.pathname==="/api/memory")return json(res,200,memory.search(u.searchParams.get("q")||"",Number(u.searchParams.get("limit")||20)));
  if(req.method==="GET"&&u.pathname==="/api/skills")return json(res,200,skills.list());
