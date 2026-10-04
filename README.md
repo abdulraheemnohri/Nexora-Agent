@@ -110,3 +110,29 @@ The mobile project is a foundation, not a claim that every Android device-contro
 `GET /v1/features` exposes the current implementation status of the Nexora capability surface. Active components include memory, skills, API, Telegram, WhatsApp, and the Android foundation. More advanced Hermes-style capabilities—browser automation, delegation, voice, wake word, cron, MCP, terminal/file tools, profiles, and batch evaluation—are explicitly tracked as planned rather than falsely presented as complete.
 
 Nexora is implementing these capabilities independently rather than copying Hermes source code.
+
+
+## Autonomous agent loop
+
+The agent runtime now implements a bounded, auditable loop:
+
+`model → structured action → policy → tool/approval → observation → model → final`
+
+The model must emit a strict JSON action. Supported V1 tools are:
+- `filesystem.read`: automatic, workspace-scoped read.
+- `filesystem.write`: pauses for explicit approval.
+- `terminal`: pauses for explicit approval and executes only inside the configured workspace.
+
+Every model response, tool request, and tool result is persisted in `task_trace`. Tasks persist their provider, step count, status, result, and pending approval in SQLite.
+
+### Agent task API
+
+- `POST /v1/agent/run` — create and execute an agent task.
+- `POST /v1/agent/tasks` — same task runner as an explicit task endpoint.
+- `GET /v1/agent/tasks` — list recent tasks.
+- `GET /v1/agent/tasks/{id}` — inspect task state.
+- `GET /v1/agent/tasks/{id}/trace` — inspect the full execution trace.
+- `POST /v1/agent/tasks/{id}/approve` — approve the currently pending tool action.
+- `POST /v1/agent/tasks/{id}/cancel` — cancel a task.
+
+The loop is intentionally bounded to eight model/tool steps per continuation. This V1 does not silently approve terminal or filesystem writes, and it does not claim browser, MCP, voice, wake-word, or Android device automation is implemented yet.
