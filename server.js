@@ -22,6 +22,7 @@ import {mcpServerSummary} from "./src/mcp-status.js";
 import {listSources,addSource,inspect,importSkill,hermesOfficialCatalog} from "./src/skill-library.js";
 import {listPresets,getPreset} from "./src/provider-presets.js";
 import {discoverProviderModels,testProviderConnection} from "./src/provider-discovery.js";
+import {getUiSettings,updateUiSettings} from "./src/ui-settings.js";
 
 const state=await loadState();
 const config=await loadConfig();
@@ -40,6 +41,7 @@ const server=http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,`http://${req.headers.host||"localhost"}`);
  if(req.method==="GET"&&u.pathname==="/")return sendFile(res,"public/index.html","text/html");
  if(req.method==="GET"&&u.pathname==="/app.js")return sendFile(res,"public/app.js","text/javascript");
+ if(req.method==="GET"&&u.pathname==="/ui-pages.js")return sendFile(res,"public/ui-pages.js","text/javascript");
  if(req.method==="GET"&&u.pathname==="/style.css")return sendFile(res,"public/style.css","text/css");
  if(req.method==="GET"&&u.pathname==="/api/health")return json(res,200,{ok:true,name:"Nexora",version:"1.6.0",platform:process.platform,node:process.version});
  if(!authorized(req))return json(res,401,{error:"Unauthorized"});
@@ -73,6 +75,8 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&u.pathname==="/api/features")return json(res,200,{features:HERMES_FEATURES,toolsets:listToolsets(),tools:listTools()});
  if(req.method==="GET"&&u.pathname==="/api/tools")return json(res,200,toolsStatus());
  if(req.method==="GET"&&u.pathname==="/api/toolsets")return json(res,200,toolsetsStatus());
+ if(req.method==="GET"&&u.pathname==="/api/settings")return json(res,200,getUiSettings());
+ if(req.method==="PUT"&&u.pathname==="/api/settings"){const b=await readBody(req);const updated=updateUiSettings(b);audit(state,{event:"ui_settings_updated",sections:Object.keys(b)});await saveState(state);return json(res,200,updated)}
  if(req.method==="GET"&&u.pathname==="/api/config"){const safeConfig=Object.fromEntries(Object.entries(config).filter(([k])=>!/(key|secret|token|password)/i.test(k)));safeConfig.anthropicConfigured=Boolean(config.anthropicKey);safeConfig.compatibleConfigured=Boolean(config.compatibleKey);return json(res,200,safeConfig)}
  if(req.method==="GET"&&u.pathname==="/api/state")return json(res,200,{memory:state.memory,skills:state.skills,tasks:state.tasks,schedules:state.schedules,audit:state.audit,queue:queue.snapshot()});
  if(req.method==="GET"&&u.pathname==="/api/memory")return json(res,200,memory.search(u.searchParams.get("q")||"",Number(u.searchParams.get("limit")||20)));
