@@ -15,8 +15,7 @@ import {loadState,saveState} from "./src/store.js";
 import {subscribe,clientCount} from "./src/events.js";
 import {TaskQueue} from "./src/task-queue.js";
 const state=await loadState();
-const config=await loadConfig();const agent=new Agent(state,saveState);const memory=new Memory(state,saveState);const skills=new Skills(state,saveState);const scheduler=new Scheduler(state,saveState,agent);scheduler.restore();
-const queue=new TaskQueue(agent,{concurrency:config.batch?.maxParallel||2});
+const config=await loadConfig();const agent=new Agent(state,saveState);const memory=new Memory(state,saveState);const skills=new Skills(state,saveState);const queue=new TaskQueue(agent,{concurrency:config.batch?.maxParallel||2});const scheduler=new Scheduler(state,saveState,queue);scheduler.restore();
 const server=http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,`http://${req.headers.host||"localhost"}`);
  if(req.method==="GET"&&u.pathname==="/")return sendFile(res,"public/index.html","text/html");
