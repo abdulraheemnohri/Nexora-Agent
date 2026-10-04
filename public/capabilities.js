@@ -45,8 +45,8 @@
     if(nav && (nav.dataset.v==="mcp" || nav.dataset.v==="skills" || nav.dataset.v==="providers")) {
       event.preventDefault(); event.stopImmediatePropagation();
       document.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b===nav));
-      const title=document.querySelector("#page-title"); if(title) title.textContent=nav.dataset.v==="mcp"?"MCP Servers":"Skills Hub";
-      try { await (nav.dataset.v==="mcp"?mcpPage():skillsPage()); } catch(e){view.innerHTML=card("Unable to load",'<p class="danger">'+esc(e.message)+'</p>');}
+      const title=document.querySelector("#page-title"); if(title) title.textContent=nav.dataset.v==="mcp"?"MCP Servers":nav.dataset.v==="skills"?"Skills Hub":"AI Providers";
+      try { await (nav.dataset.v==="mcp"?mcpPage():nav.dataset.v==="skills"?skillsPage():providerPage()); } catch(e){view.innerHTML=card("Unable to load",'<p class="danger">'+esc(e.message)+'</p>');}
       return;
     }
     const action=event.target.closest("[data-cap-action]"); if(!action)return;
