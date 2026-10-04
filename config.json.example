@@ -1,0 +1,9 @@
+{
+  "agent":{"maxSteps":20,"maxRetries":2,"timeoutMs":120000},
+  "security":{"approvalMode":"ask","workspaceOnly":true},
+  "terminal":{"timeoutMs":60000,"maxOutputBytes":200000},
+  "scheduler":{"enabled":true,"timezone":"local"},
+  "delegation":{"enabled":true,"maxConcurrent":3,"maxDepth":2},
+  "memory":{"enabled":true,"retentionDays":0},
+  "ui":{"theme":"dark","showToolActivity":true,"showReasoning":false}
+}
