@@ -73,6 +73,7 @@ async def skill_test(skill_id:int):
 async def skill_decision(skill_id:int, body:SkillDecision):
     try: return decide(skill_id,body.decision)
     except LookupError as exc: raise HTTPException(404,str(exc))
+    except ValueError as exc: raise HTTPException(422,str(exc))
 
 @app.post("/v1/skills/{skill_id}/rollback", dependencies=[Depends(auth)])
 async def skill_rollback(skill_id:int):
