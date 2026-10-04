@@ -68,7 +68,7 @@
   function settingsField(section,key,value){
     const id="setting-"+section+"-"+key, label=key.replace(/([A-Z])/g," $1").replace(/^./,x=>x.toUpperCase());
     if(typeof value==="boolean")return '<label class="cap-check"><input type="checkbox" id="'+id+'" data-section="'+section+'" data-key="'+key+'" '+(value?"checked":"")+'><span>'+esc(label)+'</span></label>';
-    if(Array.isArray(value))return textarea(label,id,"JSON array",JSON.stringify(value));
+    if(Array.isArray(value))return textarea(label,id,"JSON array",JSON.stringify(value)).replace("<textarea ","<textarea data-section=\""+section+"\" data-key=\""+key+"\" ");
     return field(label,id,"",value,typeof value==="number"?"number":"text").replace('<input ','<input data-section="'+section+'" data-key="'+key+'" ');
   }
   async function settings(){
@@ -85,7 +85,7 @@
   }
   async function logs(){
     const [audit,state]=await Promise.all([api("/api/audit"),api("/api/state")]);
-    view.innerHTML=card("Runtime logs",'<p class="muted">The web API currently exposes audit events and task state, not arbitrary host log files. Use the terminal command shown for service stdout/stderr.</p><pre>npm start\n# worker process (optional)\nnpm run worker</pre><div class="cap-actions"><button class="icon-btn" data-ui-action="export-audit">Export audit JSON</button><button class="icon-btn" data-ui-action="goto" data-id="system">System diagnostics →</button></div>')+card("Latest events",(audit||[]).slice(0,100).map(a=>'<div class="task-row"><div><b>'+esc(a.event||a.action||"event")+'</b><small>'+esc(a.createdAt||a.timestamp||"")+'</small><pre>'+esc(JSON.stringify(a,null,2))+'</pre></div></div>').join("")||'<p class="muted">No events.</p>')+card("Queue snapshot",'<pre>'+esc(JSON.stringify(state.queue||{},null,2)+'</pre>'));
+    view.innerHTML=card("Runtime logs",'<p class="muted">The web API currently exposes audit events and task state, not arbitrary host log files. Use the terminal command shown for service stdout/stderr.</p><pre>npm start\n# worker process (optional)\nnpm run worker</pre><div class="cap-actions"><button class="icon-btn" data-ui-action="export-audit">Export audit JSON</button><button class="icon-btn" data-ui-action="goto" data-id="system">System diagnostics →</button></div>')+card("Latest events",(audit||[]).slice(0,100).map(a=>'<div class="task-row"><div><b>'+esc(a.event||a.action||"event")+'</b><small>'+esc(a.createdAt||a.timestamp||"")+'</small><pre>'+esc(JSON.stringify(a,null,2))+'</pre></div></div>').join("")||'<p class="muted">No events.</p>')+card("Queue snapshot",'<pre>'+esc(JSON.stringify(state.queue||{},null,2))+'</pre>');
   }
   const pages={dashboard,chat,tasks,memory,models,schedules,tools,channels,audit:auditPage,settings,system,logs};
   async function render(page){
