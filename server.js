@@ -1,5 +1,8 @@
 import "dotenv/config";
+import {spawnSync} from "node:child_process";
 import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
 import {URL} from "node:url";
 import {Agent} from "./src/agent.js";
 import {providers} from "./src/providers.js";
@@ -22,6 +25,7 @@ import {mcpServerSummary} from "./src/mcp-status.js";
 import {listSources,addSource,inspect,importSkill,hermesOfficialCatalog} from "./src/skill-library.js";
 import {listPresets,getPreset} from "./src/provider-presets.js";
 import {discoverProviderModels,testProviderConnection} from "./src/provider-discovery.js";
+import {getUiSettings,updateUiSettings,resetUiSettingsSection} from "./src/ui-settings.js";
 
 const state=await loadState();
 const config=await loadConfig();
@@ -32,6 +36,15 @@ const queue=new TaskQueue(agent,{concurrency:config.maxConcurrentTasks||2,maxRet
 agent.setQueue(queue);
 const scheduler=new Scheduler(state,saveState,queue);
 const delegation=new Delegation(state,saveState,queue,{maxDelegationDepth:Number(process.env.NEXORA_MAX_DELEGATION_DEPTH||2),maxChildTasks:Number(process.env.NEXORA_MAX_CHILD_TASKS||4)});
+function applyUiRuntimeSettings(s){
+ if(s.general?.workspace){config.workspace=path.resolve(config.root,s.general.workspace);fs.mkdirSync(config.workspace,{recursive:true});agent.config.workspace=config.workspace;agent.registry.setWorkspace?.(config.workspace);}
+ if(Number.isFinite(Number(s.models?.maxSteps))){config.maxAgentSteps=Number(s.models.maxSteps);agent.config.maxAgentSteps=config.maxAgentSteps;}
+ agent.config.preferredProvider=s.providers?.preferredProvider&&s.providers.preferredProvider!=="manual"?String(s.providers.preferredProvider):null;
+ const approval=s.permissions?.approvalMode||"ask";config.approvalMode=approval;config.security.approvalMode=approval;agent.config.security={...(agent.config.security||{}),approvalMode:approval};agent.registry.setApprovalMode?.(approval);
+ if(Number.isFinite(Number(s.scheduler?.maxConcurrentTasks)))queue.concurrency=Math.max(1,Number(s.scheduler.maxConcurrentTasks));
+ if(Number.isFinite(Number(s.scheduler?.maxRetries)))queue.maxRetries=Math.max(0,Number(s.scheduler.maxRetries));
+}
+applyUiRuntimeSettings(getUiSettings());
 scheduler.restore();
 queue.start();
 for(const m of listMcpServers().filter(x=>x.enabled!==false)){try{await agent.registry.addMcpServer(m.name,m.command,m.args,{timeout:m.timeout})}catch(e){audit(state,{event:"mcp_start_failed",server:m.name,error:e.message})}}
@@ -39,10 +52,24 @@ for(const m of listMcpServers().filter(x=>x.enabled!==false)){try{await agent.re
 const server=http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,`http://${req.headers.host||"localhost"}`);
  if(req.method==="GET"&&u.pathname==="/")return sendFile(res,"public/index.html","text/html");
+ if(req.method==="GET"&&["/dashboard","/chat","/tasks","/memory","/skills","/providers","/models","/schedules","/tools","/channels","/mcp","/audit","/settings","/system","/npm","/logs"].includes(u.pathname))return sendFile(res,"public/index.html","text/html");
  if(req.method==="GET"&&u.pathname==="/app.js")return sendFile(res,"public/app.js","text/javascript");
+ if(req.method==="GET"&&u.pathname==="/ui-pages.js")return sendFile(res,"public/ui-pages.js","text/javascript");
  if(req.method==="GET"&&u.pathname==="/style.css")return sendFile(res,"public/style.css","text/css");
  if(req.method==="GET"&&u.pathname==="/api/health")return json(res,200,{ok:true,name:"Nexora",version:"1.6.0",platform:process.platform,node:process.version});
  if(!authorized(req))return json(res,401,{error:"Unauthorized"});
+ if(req.method==="GET"&&u.pathname==="/api/system/npm"){
+  const packageFile=path.join(config.root,"package.json");
+  const packageInfo=JSON.parse(fs.readFileSync(packageFile,"utf8"));
+  const npmCommand=process.platform==="win32"?"npm.cmd":"npm";
+  const npmResult=spawnSync(npmCommand,["--version"],{encoding:"utf8",timeout:3000,windowsHide:true,shell:process.platform==="win32"});
+  return json(res,200,{
+   name:"npm",description:"A package manager for JavaScript, included with Node.js. npm makes it easy for developers to share and reuse code.",
+   available:!npmResult.error&&npmResult.status===0,version:!npmResult.error&&npmResult.status===0?npmResult.stdout.trim():null,
+   node:process.version,platform:process.platform,project:{name:packageInfo.name,version:packageInfo.version,private:!!packageInfo.private,engines:packageInfo.engines||{},scripts:packageInfo.scripts||{},dependencies:Object.keys(packageInfo.dependencies||{}),devDependencies:Object.keys(packageInfo.devDependencies||{}),lockfile:fs.existsSync(path.join(config.root,"package-lock.json")),installed:fs.existsSync(path.join(config.root,"node_modules"))},
+   commands:{install:"npm install",test:"npm test",check:"npm run check",start:"npm start",worker:"npm run worker"}
+  });
+ }
  if(req.method==="GET"&&u.pathname==="/api/events"){res.writeHead(200,{"content-type":"text/event-stream","cache-control":"no-cache","connection":"keep-alive"});res.write("event: ready\\ndata: {}\\n\\n");const off=subscribe(res);req.on("close",off);return}
 
  if(req.method==="GET"&&u.pathname==="/api/models")return json(res,200,await listModels());
@@ -73,9 +100,14 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&u.pathname==="/api/features")return json(res,200,{features:HERMES_FEATURES,toolsets:listToolsets(),tools:listTools()});
  if(req.method==="GET"&&u.pathname==="/api/tools")return json(res,200,toolsStatus());
  if(req.method==="GET"&&u.pathname==="/api/toolsets")return json(res,200,toolsetsStatus());
+ if(req.method==="GET"&&u.pathname==="/api/settings")return json(res,200,getUiSettings());
+ if(req.method==="PUT"&&u.pathname==="/api/settings"){const b=await readBody(req);const updated=updateUiSettings(b);applyUiRuntimeSettings(updated);audit(state,{event:"ui_settings_updated",sections:Object.keys(b)});await saveState(state);return json(res,200,updated)}
+ const settingsReset=u.pathname.match(new RegExp("^/api/settings/([^/]+)$"));if(settingsReset&&req.method==="DELETE"){const updated=resetUiSettingsSection(decodeURIComponent(settingsReset[1]));applyUiRuntimeSettings(updated);audit(state,{event:"ui_settings_reset",section:settingsReset[1]});await saveState(state);return json(res,200,updated)}
  if(req.method==="GET"&&u.pathname==="/api/config"){const safeConfig=Object.fromEntries(Object.entries(config).filter(([k])=>!/(key|secret|token|password)/i.test(k)));safeConfig.anthropicConfigured=Boolean(config.anthropicKey);safeConfig.compatibleConfigured=Boolean(config.compatibleKey);return json(res,200,safeConfig)}
  if(req.method==="GET"&&u.pathname==="/api/state")return json(res,200,{memory:state.memory,skills:state.skills,tasks:state.tasks,schedules:state.schedules,audit:state.audit,queue:queue.snapshot()});
  if(req.method==="GET"&&u.pathname==="/api/memory")return json(res,200,memory.search(u.searchParams.get("q")||"",Number(u.searchParams.get("limit")||20)));
+ const memoryAction=u.pathname.match(new RegExp("^/api/memory/([^/]+)/archive$"));if(memoryAction&&req.method==="POST")return json(res,200,await memory.archive(decodeURIComponent(memoryAction[1])));
+ const memoryItem=u.pathname.match(new RegExp("^/api/memory/([^/]+)$"));if(memoryItem&&req.method==="DELETE")return json(res,200,await memory.remove(decodeURIComponent(memoryItem[1])));
  if(req.method==="POST"&&u.pathname==="/api/chat"){const b=await readBody(req);audit(state,{event:"chat",provider:b.provider||null});await saveState(state);return json(res,200,await agent.run(String(b.message||""),b.provider))}
  if(req.method==="POST"&&u.pathname==="/api/tasks"){const b=await readBody(req);const t=agent.create(String(b.message||""),b.provider);audit(state,{event:"task_created",taskId:t.id});await saveState(state);queue.enqueue(t.id);return json(res,202,t)}
  const tm=u.pathname.match(/^\/api\/tasks\/([^/]+)\/(approve|cancel)$/);if(tm&&req.method==="POST"){const result=tm[2]==="approve"?await agent.approve(tm[1]):await agent.cancel(tm[1]);audit(state,{event:"task_"+tm[2],taskId:tm[1]});await saveState(state);return json(res,200,result)}
