@@ -45,7 +45,7 @@
   document.addEventListener("click", async event => {
     const nav=event.target.closest(".nav[data-v]");
     if(nav && (nav.dataset.v==="mcp" || nav.dataset.v==="skills" || nav.dataset.v==="providers")) {
-      event.preventDefault(); event.stopImmediatePropagation();
+      event.preventDefault(); event.stopImmediatePropagation(); history.pushState({},"","/"+nav.dataset.v);
       document.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b===nav));
       const title=document.querySelector("#page-title"); if(title) title.textContent=nav.dataset.v==="mcp"?"MCP Servers":nav.dataset.v==="skills"?"Skills Hub":"AI Providers";
       try { await (nav.dataset.v==="mcp"?mcpPage():nav.dataset.v==="skills"?skillsPage():providerPage()); } catch(e){view.innerHTML=card("Unable to load",'<p class="danger">'+esc(e.message)+'</p>');}
@@ -90,5 +90,6 @@
       }
     }catch(e){toast(e.message);}
   });
+  window.NexoraCapabilities={render:async page=>{const title=document.querySelector("#page-title");if(title)title.textContent=page==="mcp"?"MCP Servers":page==="skills"?"Skills Hub":"AI Providers";document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.v===page));try{await (page==="mcp"?mcpPage():page==="skills"?skillsPage():providerPage())}catch(e){view.textContent=e.message}}};
   const style=document.createElement("style");style.textContent='.cap-field{display:grid;gap:6px;margin:12px 0;color:var(--muted);font-size:12px}.cap-field input,.cap-field textarea{width:100%;background:#080d16;color:var(--text);border:1px solid #293650;border-radius:10px;padding:11px}.cap-field textarea{min-height:70px}.cap-actions,.task-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mini{border:1px solid #30405e;background:#121b2c;color:#fff;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:11px}.mini.cancel{border-color:#66404b;color:#ff9aab}.mini.approve{border-color:#3c665b;color:#8ce8c5}';document.head.append(style);
 })();
