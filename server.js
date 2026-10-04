@@ -27,6 +27,7 @@ import {listPresets,getPreset} from "./src/provider-presets.js";
 import {discoverProviderModels,testProviderConnection} from "./src/provider-discovery.js";
 import {getUiSettings,updateUiSettings,resetUiSettingsSection} from "./src/ui-settings.js";
 import {listSessions,createSession,getSession,appendMessage} from "./src/sessions.js";
+import {buildProviderHealth} from "./src/provider-health.js";
 
 const state=await loadState();
 const config=await loadConfig();
@@ -78,6 +79,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&/^\/api\/models\/[^/]+$/.test(u.pathname))return json(res,200,await modelStatus(decodeURIComponent(u.pathname.split("/").pop())));
 
  if(req.method==="GET"&&u.pathname==="/api/providers")return json(res,200,await providerStatus());
+ if(req.method==="GET"&&u.pathname==="/api/providers/health"){const status=await providerStatus();return json(res,200,buildProviderHealth({dynamicProviders:status.dynamicProviders,builtIn:status.builtIn}));}
  if(req.method==="GET"&&u.pathname==="/api/providers/presets")return json(res,200,listPresets());
  
  if(req.method==="POST"&&u.pathname==="/api/providers/presets"){const b=await readBody(req);const preset=getPreset(String(b.id||""));if(!preset)throw Error("Provider preset not found");const p=addProvider({...preset,apiKey:b.apiKey||""});return json(res,201,p)}
