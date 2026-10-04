@@ -14,8 +14,9 @@ import {toolsStatus,toolsetsStatus} from "./src/tool-registry.js";
 import {loadState,saveState} from "./src/store.js";
 import {subscribe,clientCount} from "./src/events.js";
 import {TaskQueue} from "./src/task-queue.js";
+import {Delegation} from "./src/delegation.js";
 const state=await loadState();
-const config=await loadConfig();const agent=new Agent(state,saveState,config);const memory=new Memory(state,saveState);const skills=new Skills(state,saveState);const queue=new TaskQueue(agent,{concurrency:config.batch?.maxParallel||2});agent.setQueue(queue);const scheduler=new Scheduler(state,saveState,queue);scheduler.restore();queue.restore();
+const config=await loadConfig();const agent=new Agent(state,saveState,config);const memory=new Memory(state,saveState);const skills=new Skills(state,saveState);const queue=new TaskQueue(agent,{concurrency:config.maxConcurrentTasks||2,maxRetries:Number(process.env.NEXORA_MAX_RETRIES||3)});agent.setQueue(queue);const scheduler=new Scheduler(state,saveState,queue);const delegation=new Delegation(state,saveState,queue,{maxDelegationDepth:Number(process.env.NEXORA_MAX_DELEGATION_DEPTH||2),maxChildTasks:Number(process.env.NEXORA_MAX_CHILD_TASKS||4)});scheduler.restore();queue.restore();
 const server=http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,`http://${req.headers.host||"localhost"}`);
  if(req.method==="GET"&&u.pathname==="/")return sendFile(res,"public/index.html","text/html");
@@ -42,6 +43,8 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="POST"&&u.pathname==="/api/schedules"){const b=await readBody(req);return json(res,201,await scheduler.add(b.message,b.delayMs,b.provider))}
  const cm=u.pathname.match(/^\/api\/schedules\/([^/]+)\/cancel$/);if(cm&&req.method==="POST")return json(res,200,await scheduler.cancel(cm[1]));
  if(req.method==="GET"&&u.pathname==="/api/tasks")return json(res,200,state.tasks.slice().reverse());
+ const dm=u.pathname.match(/^\/api\/tasks\/([^/]+)\/(children|aggregate|retry)$/);if(dm&&req.method==="GET"&&dm[2]!=="retry")return json(res,200,dm[2]==="children"?delegation.children(dm[1]):delegation.aggregate(dm[1]));
+ if(dm&&req.method==="POST"&&dm[2]==="retry")return json(res,202,agent.retry(dm[1]));
  if(req.method==="GET"&&u.pathname==="/api/audit")return json(res,200,state.audit.slice().reverse());
  if(req.method==="POST"&&u.pathname==="/api/webhooks/telegram")return json(res,200,{ok:true});
  if(req.method==="POST"&&u.pathname==="/api/webhooks/whatsapp")return json(res,200,{ok:true});
