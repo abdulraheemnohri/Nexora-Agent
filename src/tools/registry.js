@@ -2,6 +2,8 @@ import {FileSystemTool} from "./filesystem.js";
 import {terminal} from "./terminal.js";
 import {git} from "./git.js";
 import {systemInfo} from "./system.js";
+import {httpRequest} from "./http.js";
+import {listProcesses} from "./process.js";
 import {commandRisk,decision} from "../security/policy.js";
 
 export function createToolRegistry(workspace,security={}) {
@@ -11,7 +13,9 @@ export function createToolRegistry(workspace,security={}) {
     ["terminal",{name:"terminal",risk:a=>commandRisk(a.command),execute:(a,c)=>terminal(a.command,c,a.timeout)}],
     ["filesystem",{name:"filesystem",risk:a=>a.action==="write"?"high":"low",execute:a=>a.action==="read"?fs.read(a.path):a.action==="write"?fs.write(a.path,a.content):a.action==="list"?fs.list(a.path):a.action==="stat"?fs.stat(a.path):Promise.reject(Error("Unsupported filesystem action"))}],
     ["git",{name:"git",risk:a=>commandRisk(a.command),execute:(a,c)=>git(a.command,c,a.mode||"ask")}],
-    ["system",{name:"system",risk:()=> "low",execute:async()=>systemInfo()}]
+    ["system",{name:"system",risk:()=> "low",execute:async()=>systemInfo()}],
+    ["http",{name:"http",risk:()=> "medium",execute:httpRequest}],
+    ["process",{name:"process",risk:()=> "medium",execute:async()=>listProcesses()}]
   ]);
   return {
     has:name=>tools.has(name),
