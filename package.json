@@ -1,16 +1,1 @@
-{
-  "name": "nexora-agent",
-  "version": "1.4.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "test": "node --test",
-    "doctor": "node ./bin/nexora.js doctor"
-  },
-  "dependencies": {
-    "dotenv": "^16.4.7"
-  },
-  "description": "Cross-platform local-first AI agent with Hermes-inspired tools, skills, memory, delegation, browser, automation and gateway features"
-}
+{"name":"nexora-agent","version":"1.0.0","type":"module","private":true,"bin":{"nexora":"./bin/nexora.js"},"scripts":{"start":"node server.js","worker":"node src/worker.js","test":"node --test test/**/*.test.js"},"engines":{"node":">=18"},"dependencies":{}}

@@ -1,1 +1,1 @@
-import path from "node:path";export function resolveWorkspace(root,input=""){const base=path.resolve(root),full=path.resolve(base,String(input));if(full!==base&&!full.startsWith(base+path.sep))throw Error("Path escapes Nexora workspace");return full}
+import path from"node:path";export function safePath(workspace,input){const base=path.resolve(workspace),target=path.resolve(base,input);if(target!==base&&!target.startsWith(base+path.sep))throw new Error("Path escapes NEXORA_WORKSPACE");return target}
