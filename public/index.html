@@ -1,1 +1,10 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nexora Agent</title><link rel="stylesheet" href="/style.css"></head><body><aside><b>NEXORA</b><button data-v="chat">Chat</button><button data-v="tasks">Tasks</button><button data-v="providers">Providers</button><button data-v="memory">Memory</button><button data-v="skills">Skills</button><button data-v="schedules">Schedules</button><button data-v="audit">Audit</button></aside><main><header><span id="status">● checking</span><button id="refresh">Refresh</button></header><section id="view"></section></main><script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#070a11"><title>Nexora — Local AI Operator</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<div class="app-shell">
+<aside class="sidebar"><div class="brand"><span class="brand-mark">N</span><div><b>NEXORA</b><small>LOCAL AI OPERATOR</small></div></div>
+<nav><button class="nav active" data-v="chat"><span>⌂</span>Command Center</button><button class="nav" data-v="tasks"><span>✓</span>Tasks</button><button class="nav" data-v="providers"><span>◈</span>AI Providers</button><button class="nav" data-v="memory"><span>◎</span>Memory</button><button class="nav" data-v="skills"><span>✦</span>Skills</button><button class="nav" data-v="schedules"><span>◷</span>Automation</button><button class="nav" data-v="audit"><span>≡</span>Audit Log</button></nav>
+<div class="sidebar-foot"><span class="dot"></span><span id="connection">Local runtime</span></div></aside>
+<main class="workspace"><header class="topbar"><div><span class="eyebrow">NEXORA / CONTROL PLANE</span><h1 id="page-title">Command Center</h1></div><div class="top-actions"><span class="status-pill" id="status">● CONNECTING</span><button class="icon-btn" id="refresh" title="Refresh">↻</button></div></header>
+<section id="view"></section></main>
+</div><div id="toast" class="toast"></div><script src="/app.js"></script></body></html>
