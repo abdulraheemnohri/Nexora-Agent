@@ -4,9 +4,9 @@ import {git} from "./git.js";
 import {systemInfo} from "./system.js";
 import {httpRequest} from "./http.js";
 import {listProcesses} from "./process.js";
-import {commandRisk,decision} from "../security/policy.js";
+import {commandRisk,decision} from "../security/policy.js";\nimport {McpClient} from "../mcp.js";
 
-export function createToolRegistry(workspace,security={}) {
+export function createToolRegistry(workspace,security={}) {\n  const mcpServers=new Map();
   const fs=new FileSystemTool(workspace);
   const mode=security.approvalMode==="high-risk"?"ask":(security.approvalMode||"ask");
   const tools=new Map([
@@ -20,8 +20,8 @@ export function createToolRegistry(workspace,security={}) {
   return {
     has:name=>tools.has(name),
     get:name=>tools.get(name),
-    list:()=>[...tools.values()].map(t=>t.name),
-    authorize:(name,args={})=>{const tool=tools.get(name);if(!tool)throw Error("Unknown tool: "+name);const r=tool.risk(args);return {risk:r,decision:decision({risk:r},mode)}},
-    execute:async(name,args={},cwd=workspace,context={})=>{const tool=tools.get(name);if(!tool)throw Error("Unknown tool: "+name);const r=tool.risk(args);const d=decision({risk:r},mode);if(d!=="allow"&&!context.approved)throw Error("Tool requires approval: "+name+" ("+r+")");if(name==="terminal")return terminal(args.command,cwd,args.timeout);if(name==="filesystem")return args.action==="read"?fs.read(args.path):args.action==="write"?fs.write(args.path,args.content):args.action==="list"?fs.list(args.path):args.action==="stat"?fs.stat(args.path):Promise.reject(Error("Unsupported filesystem action"));if(name==="git")return git(args.command,cwd,args.mode||"ask");if(name==="system")return systemInfo();if(name==="http")return httpRequest(args);if(name==="process")return listProcesses();throw Error("Unsupported tool: "+name)}
+    list:()=>[...tools.values()].map(t=>t.name),\n    mcpList:()=>[...mcpServers.entries()].flatMap(([server,c])=>c.tools.map(t=>({name:`mcp:${server}:${t.name}`,server,...t}))),\n    async addMcpServer(name,command,args=[],opts={}){if(!/^[a-zA-Z0-9_-]{1,48}$/.test(name))throw Error("Invalid MCP server name");if(mcpServers.has(name))throw Error("MCP server already exists: "+name);const client=new McpClient(command,args,opts);await client.connect();mcpServers.set(name,client);return{name,tools:client.tools}},\n    removeMcpServer(name){const c=mcpServers.get(name);if(!c)return false;c.close();mcpServers.delete(name);return true},
+    authorize:(name,args={})=>{if(name.startsWith("mcp:")){if(name.split(":").length<3)throw Error("Invalid MCP tool name");const [_,server]=name.split(":");if(!mcpServers.has(server))throw Error("MCP server not connected: "+server);const r="medium";return {risk:r,decision:decision({risk:r},mode)}}const tool=tools.get(name);if(!tool)throw Error("Unknown tool: "+name);const r=tool.risk(args);return {risk:r,decision:decision({risk:r},mode)}},
+    execute:async(name,args={},cwd=workspace,context={})=>{if(name.startsWith("mcp:")){const parts=name.split(":");if(parts.length<3)throw Error("Invalid MCP tool name");const server=parts[1],toolName=parts.slice(2).join(":");const client=mcpServers.get(server);if(!client)throw Error("MCP server not connected: "+server);const r="medium",d=decision({risk:r},mode);if(d!=="allow"&&!context.approved)throw Error("MCP tool requires approval: "+name+" ("+r+")");return client.callTool(toolName,args)}const tool=tools.get(name);if(!tool)throw Error("Unknown tool: "+name);const r=tool.risk(args);const d=decision({risk:r},mode);if(d!=="allow"&&!context.approved)throw Error("Tool requires approval: "+name+" ("+r+")");if(name==="terminal")return terminal(args.command,cwd,args.timeout);if(name==="filesystem")return args.action==="read"?fs.read(args.path):args.action==="write"?fs.write(args.path,args.content):args.action==="list"?fs.list(args.path):args.action==="stat"?fs.stat(args.path):Promise.reject(Error("Unsupported filesystem action"));if(name==="git")return git(args.command,cwd,args.mode||"ask");if(name==="system")return systemInfo();if(name==="http")return httpRequest(args);if(name==="process")return listProcesses();throw Error("Unsupported tool: "+name)}
   };
 }
