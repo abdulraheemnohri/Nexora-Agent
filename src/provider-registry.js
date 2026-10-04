@@ -1,0 +1,1 @@
+import {providers as legacy} from "./providers.js";export async function providerStatus(){return legacy.status()}export async function generate(prompt,name){const out=await legacy.generate(prompt,name);return typeof out==="string"?{text:out,provider:name||"default"}:out}
