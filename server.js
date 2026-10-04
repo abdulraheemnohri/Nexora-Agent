@@ -24,6 +24,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&u.pathname==="/style.css")return sendFile(res,"public/style.css","text/css");
  if(req.method==="GET"&&u.pathname==="/api/health")return json(res,200,{ok:true,name:"Nexora",version:"1.4.0",platform:process.platform,node:process.version});
  if(!authorized(req))return json(res,401,{error:"Unauthorized"});
+ if(req.method==="GET"&&u.pathname==="/api/events"&&!authorized(req)&&u.searchParams.get("token")!==process.env.NEXORA_API_TOKEN)return json(res,401,{error:"Unauthorized"});
  if(req.method==="GET"&&u.pathname==="/api/events"){res.writeHead(200,{"content-type":"text/event-stream","cache-control":"no-cache","connection":"keep-alive"});res.write("event: ready\\ndata: {}\\n\\n");const off=subscribe(res);req.on("close",off);return}
  if(req.method==="GET"&&u.pathname==="/api/providers")return json(res,200,await providers.status());
  if(req.method==="GET"&&u.pathname==="/api/features")return json(res,200,{features:HERMES_FEATURES,toolsets:listToolsets(),tools:listTools()});
