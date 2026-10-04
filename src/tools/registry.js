@@ -30,6 +30,7 @@ export function createToolRegistry(workspace,security={}) {
     return advertised?{server,toolName,client,advertised}:null;
   };
   return {
+    setWorkspace(root){fs.root=root;return fs.root},
     setApprovalMode(value){mode=["ask","safe","trusted"].includes(value)?value:"ask";return mode},
     has:name=>tools.has(name)||Boolean(mcpEntry(name)),
     get:name=>tools.get(name)||mcpEntry(name)?.advertised||null,
