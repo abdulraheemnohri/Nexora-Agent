@@ -41,7 +41,7 @@ npm run dev
 ```
 
 ## Claude
-Set `ANTHROPIC_API_KEY` and `NEXORA_DEFAULT_PROVIDER=claude`. API calls may incur charges. Never put the key in frontend code.
+Set `NEXORA_ANTHROPIC_API_KEY` and `NEXORA_DEFAULT_PROVIDER=claude`. API calls may incur charges. Never put the key in frontend code.
 
 ## LiteRT-LM CLI
 1. Inspect the installed CLI using its own `--help`.
