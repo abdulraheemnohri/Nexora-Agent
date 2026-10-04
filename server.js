@@ -39,7 +39,7 @@ function applyUiRuntimeSettings(s){
  if(s.general?.workspace){config.workspace=path.resolve(config.root,s.general.workspace);fs.mkdirSync(config.workspace,{recursive:true});agent.config.workspace=config.workspace;}
  if(Number.isFinite(Number(s.models?.maxSteps))){config.maxAgentSteps=Number(s.models.maxSteps);agent.config.maxAgentSteps=config.maxAgentSteps;}
  agent.config.preferredProvider=s.providers?.preferredProvider&&s.providers.preferredProvider!=="manual"?String(s.ai.preferredProvider):null;
- const approval=s.permissions?.approvalMode||s.terminal?.approvalMode||"ask";config.approvalMode=approval;config.security.approvalMode=approval;agent.config.security={...(agent.config.security||{}),approvalMode:approval};agent.registry.setApprovalMode?.(approval);
+ const approval=s.permissions?.approvalMode||"ask";config.approvalMode=approval;config.security.approvalMode=approval;agent.config.security={...(agent.config.security||{}),approvalMode:approval};agent.registry.setApprovalMode?.(approval);
  if(Number.isFinite(Number(s.scheduler?.maxConcurrentTasks)))queue.concurrency=Math.max(1,Number(s.scheduler.maxConcurrentTasks));
  if(Number.isFinite(Number(s.scheduler?.maxRetries)))queue.maxRetries=Math.max(0,Number(s.scheduler.maxRetries));
 }
