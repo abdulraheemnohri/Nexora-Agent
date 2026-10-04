@@ -5,7 +5,7 @@ const defaults = () => ({
   general: { agentName:"Nexora", language:"en", timezone:"Asia/Karachi", workspace:"./workspace", theme:"dark", compactMode:false, confirmNavigation:false },
   providers: { preferredProvider:"manual", fallbackPolicy:"never" },
   models: { preferredModel:"smart-mini", maxSteps:20, temperature:0.2, streamResponses:true, contextLimit:32768 },
-  terminal: { approvalMode:"ask", timeoutSeconds:120, workingDirectory:"./workspace", allowShell:false, keepCommandHistory:true, maxOutputKb:256 },
+  terminal: { timeoutSeconds:120, workingDirectory:"./workspace", allowShell:false, keepCommandHistory:true, maxOutputKb:256 },
   tools: { enabledToolsets:["filesystem","git","system","http"], maxParallelTools:2, requireWriteApproval:true, allowNetwork:true },
   permissions: { approvalMode:"ask", allowDestructive:false, allowOutsideWorkspace:false, allowPrivilegeEscalation:false, requireApprovalForExternalCalls:true },
   memory: { enabled:true, retentionDays:365, maxItems:10000, autoSave:true, summarizeLongSessions:true },
