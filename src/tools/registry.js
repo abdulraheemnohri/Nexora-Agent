@@ -10,7 +10,7 @@ import {McpClient} from "../mcp.js";
 export function createToolRegistry(workspace,security={}) {
   const mcpServers=new Map();
   const fs=new FileSystemTool(workspace);
-  const mode=security.approvalMode==="high-risk"?"ask":(security.approvalMode||"ask");
+  let mode=security.approvalMode==="high-risk"?"ask":(security.approvalMode||"ask");
   const tools=new Map([
     ["terminal",{name:"terminal",risk:a=>commandRisk(a.command)}],
     ["filesystem",{name:"filesystem",risk:a=>a.action==="write"?"high":"low"}],
@@ -30,6 +30,7 @@ export function createToolRegistry(workspace,security={}) {
     return advertised?{server,toolName,client,advertised}:null;
   };
   return {
+    setApprovalMode(value){mode=["ask","safe","trusted"].includes(value)?value:"ask";return mode},
     has:name=>tools.has(name)||Boolean(mcpEntry(name)),
     get:name=>tools.get(name)||mcpEntry(name)?.advertised||null,
     list:()=>[...tools.values()].map(t=>t.name),
