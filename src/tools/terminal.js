@@ -1,0 +1,2 @@
+import {runShell} from "../platforms.js";
+export async function terminal(command,cwd,timeout=60000){if(typeof command!=="string"||!command.trim())throw Error("command required");return runShell(command,{cwd,timeout})}

@@ -1,21 +1,25 @@
-# Nexora Agent — HTML + CSS + JavaScript
+# Nexora Agent
 
-A clean restart of Nexora as a **single-language JavaScript full-stack AI agent**.
+Nexora is a terminal-first, cross-platform local AI agent built with **HTML + CSS + JavaScript + Node.js**.
 
-- Frontend: HTML + CSS + vanilla JavaScript
-- Backend: Node.js JavaScript
-- Local storage: JSON
-- AI: Claude + detected/validated LiteRT-LM CLI + OpenAI-compatible endpoints
-- Gateway: HTTP API
-- Agent: bounded tool-use loop with approval and workspace sandbox
-- Channels: Telegram/WhatsApp webhook foundations
-- No React, TypeScript, Docker, Firebase.
+## Product scope
+**Android app/client has been removed.** This repository does not contain or ship an Android application.
 
-## Start on Debian/Linux
+Nexora runs on Node.js-capable desktop/server environments:
+- Linux terminals: Bash, Zsh, Dash and other POSIX shells
+- Windows: PowerShell, Windows Terminal and CMD-capable Windows hosts
+- macOS
+- BSD/Unix-like systems
+- Other Node.js-supported OS targets can use the same adapter where their shell is compatible
 
+The web UI remains a browser interface to the local Node.js agent; it is not a separate Android app.
+
+## Stack
+HTML5 + CSS3 + vanilla JavaScript + Node.js. No React, TypeScript, Docker or Firebase.
+
+## Install
+Linux/macOS/BSD:
 ```bash
-sudo apt update
-sudo apt install -y nodejs npm git
 git clone https://github.com/abdulraheemnohri/Nexora-Agent.git
 cd Nexora-Agent
 cp .env.example .env
@@ -23,21 +27,37 @@ npm install
 npm start
 ```
 
+Windows PowerShell:
+```powershell
+git clone https://github.com/abdulraheemnohri/Nexora-Agent.git
+cd Nexora-Agent
+Copy-Item .env.example .env
+npm install
+npm start
+```
+
 Open `http://127.0.0.1:8787`.
 
-Set `NEXORA_API_TOKEN` and `ANTHROPIC_API_KEY` in `.env`.
+## Cross-platform terminal engine
+Nexora detects `process.platform` at runtime:
+- Windows defaults to PowerShell
+- POSIX systems default to the user's `SHELL`, then `/bin/sh`
 
-## LiteRT-LM
+Optional overrides:
+`NEXORA_WINDOWS_SHELL` and `NEXORA_POSIX_SHELL`.
 
-Nexora never invents LiteRT-LM CLI syntax. It runs the configured executable with `--help` for diagnostics. Actual inference is enabled only when you provide the exact command syntax supported by your installed CLI through `NEXORA_LITERT_COMMAND`, using `{prompt}` as the substitution placeholder.
+Terminal commands and filesystem writes are **approval-gated**. Commands execute with the Nexora workspace as their working directory.
 
-## Project
+## Providers
+Claude/Anthropic, LiteRT-LM CLI and OpenAI-compatible endpoints are supported. LiteRT-LM syntax is never guessed: Nexora probes the configured binary with `--help` and requires an explicit `NEXORA_LITERT_COMMAND` template using `{prompt}`.
 
+## Security
+Keep the server on localhost unless remote access is intentionally configured. Set a strong `NEXORA_API_TOKEN`. Do not expose an unrestricted terminal endpoint to the public internet.
+
+## Tests
+```bash
+npm test
 ```
-public/       HTML/CSS/JS dashboard
-src/          Node.js backend
-src/agent.js  autonomous agent loop
-src/providers.js Claude/LiteRT/compatible providers
-src/tools/    sandboxed tools
-data/         local persistent state
-```
+
+## Roadmap
+V1 cross-platform terminal core → background jobs/scheduler → richer skills/memory → Telegram/WhatsApp adapters → browser/MCP integrations. Android app remains out of scope.

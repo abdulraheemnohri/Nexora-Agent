@@ -1,0 +1,1 @@
+export {detectPlatform,shellSpec,runShell} from "./platforms.js";
