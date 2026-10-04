@@ -19,6 +19,7 @@ import {Delegation} from "./src/delegation.js";
 import {listModels,modelStatus,installModel,testModel,useModel} from "./src/litert-models.js";
 import {listMcpServers,addMcpServer,removeMcpServer,getMcpServer} from "./src/mcp-registry.js";
 import {listSources,addSource,inspect,importSkill,hermesOfficialCatalog} from "./src/skill-library.js";
+import {listPresets,getPreset} from "./src/provider-presets.js";
 
 const state=await loadState();
 const config=await loadConfig();
@@ -47,6 +48,8 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&/^\/api\/models\/[^/]+$/.test(u.pathname))return json(res,200,await modelStatus(decodeURIComponent(u.pathname.split("/").pop())));
 
  if(req.method==="GET"&&u.pathname==="/api/providers")return json(res,200,await providerStatus());
+ if(req.method==="GET"&&u.pathname==="/api/providers/presets")return json(res,200,listPresets());
+ if(req.method==="POST"&&u.pathname==="/api/providers/presets"){const b=await readBody(req);const preset=getPreset(String(b.id||""));if(!preset)throw Error("Provider preset not found");const p=addProvider({...preset,apiKey:b.apiKey||""});return json(res,201,p)}
  if(req.method==="POST"&&u.pathname==="/api/providers"){const b=await readBody(req);const p=addProvider(b);audit(state,{event:"provider_added",providerId:p.id});await saveState(state);return json(res,201,p)}
  const pm=u.pathname.match(/^\/api\/providers\/([^/]+)(?:\/(use|test))?$/);if(pm){const id=decodeURIComponent(pm[1]);if(req.method==="DELETE"&&!pm[2])return json(res,200,{removed:removeProvider(id)});if(req.method==="PUT"&&!pm[2]){const b=await readBody(req);return json(res,200,updateProvider(id,b))}if(req.method==="POST"&&pm[2]==="use")return json(res,200,useProvider(id));if(req.method==="POST"&&pm[2]==="test"){const b=await readBody(req);return json(res,200,await generateDynamic(id,String(b.prompt||"Reply with exactly: NEXORA_PROVIDER_OK")))}} 
 
