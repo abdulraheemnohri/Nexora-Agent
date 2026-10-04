@@ -8,6 +8,7 @@ from app.agent.runtime import AgentRuntime
 from app.learning.skills import list_skills, propose, test_skill, decide, rollback
 from app.channels.telegram import TelegramChannel
 from app.channels.whatsapp import WhatsAppCloudChannel
+from app.core.features import catalog
 
 settings = get_settings()
 app = FastAPI(title="Nexora Agent API", version="1.0.0")
@@ -120,3 +121,4 @@ async def whatsapp_webhook(payload:dict):
             results.append({"chat_id":item["chat_id"],"ok":True})
         except Exception as exc: results.append({"chat_id":item["chat_id"],"ok":False,"error":str(exc)})
     return {"ok":True,"messages":results}
+\n\n@app.get("/v1/features", dependencies=[Depends(auth)])\nasync def features(): return {"features":catalog()}\n
