@@ -13,7 +13,7 @@ test("UI settings expose defaults without credentials",()=>{
   assert.equal(settings.general.theme,"dark");
   assert.equal(settings.permissions.approvalMode,"ask");
   assert.equal(settings.security.bindHost,"127.0.0.1");
-  assert.equal(Object.hasOwn(settings.ai,"apiKey"),false);
+  assert.equal(Object.hasOwn(settings.providers,"apiKey"),false);
 });
 
 test("UI settings persist validated values",()=>{
