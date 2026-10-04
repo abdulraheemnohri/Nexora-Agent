@@ -128,7 +128,7 @@ Every model response, tool request, and tool result is persisted in `task_trace`
 ### Agent task API
 
 - `POST /v1/agent/run` — create and execute an agent task.
-- `POST /v1/agent/tasks` — same task runner as an explicit task endpoint.
+- `POST /v1/agent/tasks` — enqueue a background task and return immediately.
 - `GET /v1/agent/tasks` — list recent tasks.
 - `GET /v1/agent/tasks/{id}` — inspect task state.
 - `GET /v1/agent/tasks/{id}/trace` — inspect the full execution trace.
