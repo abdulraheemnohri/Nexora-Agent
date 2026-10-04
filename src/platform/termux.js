@@ -1,0 +1,2 @@
+export function detectTermux(env=process.env){return Boolean(env.PREFIX?.includes("com.termux")||env.TERMUX_VERSION||env.PREFIX?.endsWith("/com.termux/files/usr"))}
+export function termuxInfo(env=process.env){return{isTermux:detectTermux(env),prefix:env.PREFIX||null,termuxVersion:env.TERMUX_VERSION||null,home:env.HOME||null}}
