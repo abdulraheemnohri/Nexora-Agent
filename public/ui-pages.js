@@ -102,7 +102,7 @@
       if(a==="goto"){render(id);return}
       if(a==="retry"){render(active);return}
       if(a==="settings-section"){document.querySelectorAll("[data-section-form]").forEach(f=>f.closest(".card").style.display=f.dataset.sectionForm===id?"":"none");return}
-      if(a==="settings-reset"){const fresh=await api("/api/settings");const section=fresh[id];for(const [key,value] of Object.entries(section)){const el=document.querySelector('[data-section="'+id+'"][data-key="'+key+'"]');if(el){if(el.type==="checkbox")el.checked=value;else el.value=Array.isArray(value)?JSON.stringify(value):value}}toast("Section reset to saved defaults");return}
+      if(a==="settings-reset"){await api("/api/settings/"+encodeURIComponent(id),{method:"DELETE",body:"{}"});settingsCache=await api("/api/settings");toast("Section restored to defaults");render("settings");return}
       if(a==="export-audit"){const data=await api("/api/audit");const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));const link=document.createElement("a");link.href=url;link.download="nexora-audit.json";link.click();URL.revokeObjectURL(url);return}
       if(a==="queue-chat"){const message=document.querySelector("#chat-message")?.value.trim();if(!message)throw Error("Enter a message first");const provider=document.querySelector("#chat-provider")?.value||undefined;const result=await api("/api/tasks",{method:"POST",body:JSON.stringify({message,provider})});toast("Task queued");render("tasks");return}
       if(a==="task-approve"||a==="task-cancel"){await api("/api/tasks/"+encodeURIComponent(id)+"/"+(a==="task-approve"?"approve":"cancel"),{method:"POST",body:"{}"});toast("Task action complete");render("tasks");return}
