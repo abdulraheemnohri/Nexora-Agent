@@ -6,6 +6,8 @@ from app.gateway import Gateway
 from app.schemas import ChatRequest, MemoryCreate, SkillCreate, SkillDecision
 from app.agent.runtime import AgentRuntime
 from app.learning.skills import list_skills, propose, test_skill, decide, rollback
+from app.channels.telegram import TelegramChannel
+from app.channels.whatsapp import WhatsAppCloudChannel
 
 settings = get_settings()
 app = FastAPI(title="Nexora Agent API", version="1.0.0")
@@ -83,4 +85,38 @@ async def skill_rollback(skill_id:int):
 @app.get("/v1/audit", dependencies=[Depends(auth)])
 async def audit():
     with connect() as db: return [dict(r) for r in db.execute("SELECT * FROM audit ORDER BY id DESC LIMIT 200")]
-\n\nfrom app.channels.telegram import TelegramChannel\nfrom app.channels.whatsapp import WhatsAppCloudChannel\n\n@app.get("/v1/channels", dependencies=[Depends(auth)])\nasync def channels():\n    return {"channels":[{"id":"telegram","enabled":settings.telegram_enabled and bool(settings.telegram_bot_token)},{"id":"whatsapp","enabled":settings.whatsapp_enabled and bool(settings.whatsapp_access_token and settings.whatsapp_phone_number_id)}]}\n\n@app.get("/v1/channels/whatsapp/webhook")\nasync def whatsapp_verify(mode:str=Query(default=""), token:str=Query(default=""), challenge:str=Query(default="")):\n    try: return WhatsAppCloudChannel.verify(mode,token,challenge,settings.whatsapp_verify_token)\n    except ValueError as exc: raise HTTPException(403,str(exc))\n\n@app.post("/v1/channels/telegram/webhook")\nasync def telegram_webhook(payload:dict):\n    item=TelegramChannel.parse_update(payload)\n    if not item: return {"ok":True,"ignored":True}\n    try:\n        answer,_=await Gateway().generate(item["text"])\n        if settings.telegram_enabled: await TelegramChannel(settings.telegram_bot_token).send_text(item["chat_id"],answer)\n        return {"ok":True,"response":answer}\n    except Exception as exc: raise HTTPException(503,str(exc))\n\n@app.post("/v1/channels/whatsapp/webhook")\nasync def whatsapp_webhook(payload:dict):\n    items=WhatsAppCloudChannel.parse_payload(payload); results=[]\n    for item in items:\n        try:\n            answer,_=await Gateway().generate(item["text"])\n            if settings.whatsapp_enabled: await WhatsAppCloudChannel(settings.whatsapp_access_token,settings.whatsapp_phone_number_id,settings.whatsapp_api_version).send_text(item["chat_id"],answer)\n            results.append({"chat_id":item["chat_id"],"ok":True})\n        except Exception as exc: results.append({"chat_id":item["chat_id"],"ok":False,"error":str(exc)})\n    return {"ok":True,"messages":results}\n
+
+from app.channels.telegram import TelegramChannel
+from app.channels.whatsapp import WhatsAppCloudChannel
+
+@app.get("/v1/channels", dependencies=[Depends(auth)])
+async def channels():
+    return {"channels":[{"id":"telegram","enabled":settings.telegram_enabled and bool(settings.telegram_bot_token)},{"id":"whatsapp","enabled":settings.whatsapp_enabled and bool(settings.whatsapp_access_token and settings.whatsapp_phone_number_id)}]}
+
+@app.get("/v1/channels/whatsapp/webhook")
+async def whatsapp_verify(mode:str=Query(default=""), token:str=Query(default=""), challenge:str=Query(default="")):
+    try: return WhatsAppCloudChannel.verify(mode,token,challenge,settings.whatsapp_verify_token)
+    except ValueError as exc: raise HTTPException(403,str(exc))
+
+@app.post("/v1/channels/telegram/webhook")
+async def telegram_webhook(payload:dict, x_telegram_bot_api_secret_token: str | None = Header(default=None)):
+    if settings.telegram_webhook_secret and x_telegram_bot_api_secret_token != settings.telegram_webhook_secret:
+        raise HTTPException(401,"Invalid Telegram webhook secret")
+    item=TelegramChannel.parse_update(payload)
+    if not item: return {"ok":True,"ignored":True}
+    try:
+        answer,_=await Gateway().generate(item["text"])
+        if settings.telegram_enabled: await TelegramChannel(settings.telegram_bot_token).send_text(item["chat_id"],answer)
+        return {"ok":True,"response":answer}
+    except Exception as exc: raise HTTPException(503,str(exc))
+
+@app.post("/v1/channels/whatsapp/webhook")
+async def whatsapp_webhook(payload:dict):
+    items=WhatsAppCloudChannel.parse_payload(payload); results=[]
+    for item in items:
+        try:
+            answer,_=await Gateway().generate(item["text"])
+            if settings.whatsapp_enabled: await WhatsAppCloudChannel(settings.whatsapp_access_token,settings.whatsapp_phone_number_id,settings.whatsapp_api_version).send_text(item["chat_id"],answer)
+            results.append({"chat_id":item["chat_id"],"ok":True})
+        except Exception as exc: results.append({"chat_id":item["chat_id"],"ok":False,"error":str(exc)})
+    return {"ok":True,"messages":results}
