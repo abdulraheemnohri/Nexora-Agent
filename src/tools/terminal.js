@@ -1,6 +1,1 @@
-import {runShell} from "../platforms.js";
-export async function terminal(command,cwd,timeout=60000){
- if(typeof command!=="string"||!command.trim())throw Error("command required");
- const limit=Math.min(Math.max(Number(timeout)||60000,1000),120000);
- return runShell(command,{cwd,timeout:limit});
-}
+import{spawn}from"node:child_process";import{decide,risk}from"../security/policy.js";export function terminalTool(config){return{name:"terminal",risk(command){return risk(command)},async execute({command,cwd=config.workspace,approval=false}){const decision=decide(command,config.terminalMode);if(decision==="DENY")throw new Error("Command blocked by policy");if(decision==="ASK"&&!approval)return{approvalRequired:true,risk:risk(command),command,cwd};const win=process.platform==="win32",child=spawn(win?(process.env.ComSpec||"cmd.exe"):"/bin/sh",win?["/d","/s","/c",command]:["-lc",command],{cwd,env:process.env});return await new Promise(resolve=>{let stdout="",stderr="",start=Date.now();child.stdout.on("data",d=>stdout+=d);child.stderr.on("data",d=>stderr+=d);child.on("close",code=>resolve({approvalRequired:false,command,cwd,stdout,stderr,exitCode:code,durationMs:Date.now()-start,timestamp:new Date().toISOString()}))})}}}
