@@ -56,7 +56,16 @@
   }
   async function tools(){
     const [defs,sets,features]=await Promise.all([api("/api/tools"),api("/api/toolsets"),api("/api/features")]);
-    view.innerHTML=card("Tool registry",'<p class="muted">Inspect registered tools and available toolsets. Risky actions should remain approval-gated.</p><pre>'+esc(JSON.stringify(defs,null,2))+'</pre>')+card("Toolsets",'<pre>'+esc(JSON.stringify(sets,null,2))+'</pre>')+card("Feature catalog",'<pre>'+esc(JSON.stringify(features.features||features,null,2))+'</pre>');
+    const rows=(defs.schemas||[]).map(s=>{
+      const meta=(defs.tools||[]).find(t=>t.name===s.name)||{};
+      const risk=meta.risk||"unknown";
+      const gate=meta.requiresApproval?"Approval required":"Policy controlled";
+      return '<div class="task-row"><div><b>'+esc(s.name)+'</b><small>'+esc(s.description)+'</small><small>Risk: '+esc(risk)+' · '+esc(gate)+'</small><pre>'+esc(JSON.stringify(s.input,null,2))+'</pre></div></div>';
+    }).join("");
+    view.innerHTML=card("Tool Control",heading("Operator tools","Core execution tools expose explicit schemas and security metadata. External/MCP tools remain subject to their own authorization and approval policy.")+
+      (rows||'<p class="muted">No structured core tools are registered.</p>'))+
+      card("Toolsets",'<pre>'+esc(JSON.stringify(sets,null,2))+'</pre>')+
+      card("Feature catalog",'<pre>'+esc(JSON.stringify(features.features||features,null,2))+'</pre>');
   }
   async function channels(){
     const [config,settings]=await Promise.all([api("/api/config"),api("/api/settings")]);
