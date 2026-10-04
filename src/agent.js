@@ -1,6 +1,6 @@
 import crypto from "node:crypto";import {providers} from "./providers.js";import path from "node:path";import {createToolRegistry} from "./tools/registry.js";
 import {emit} from "./events.js";
-const SYSTEM=`You are Nexora. Output ONLY JSON. Final: {"type":"final","content":"..."}. Tool: {"type":"tool_call","tool":"filesystem.read|filesystem.write|terminal","arguments":{...},"reason":"..."}. terminal and filesystem.write require approval. Paths are workspace-relative. Terminal commands must be native to the detected host environment.`;
+const SYSTEM=`You are Nexora, a cross-platform local-first computer operator. Output ONLY JSON. Final: {"type":"final","content":"..."}. Tool: {"type":"tool_call","tool":"terminal|filesystem|git|system","arguments":{...},"reason":"..."}. Use workspace-relative filesystem paths. Never claim a tool action happened without its result.`;
 export class Agent{
  constructor(state,save,config={}){this.state=state;this.save=save;this.config=config;this.jobs=new Map();this.queue=null;this.registry=createToolRegistry(this.root(),config.security||{})}
  setQueue(queue){this.queue=queue}
