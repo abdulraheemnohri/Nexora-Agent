@@ -46,11 +46,35 @@ async def agent_run(body: ChatRequest):
 async def tasks():
     with connect() as db: return [dict(r) for r in db.execute("SELECT * FROM tasks ORDER BY id DESC LIMIT 100")]
 
+@app.post("/v1/agent/tasks", dependencies=[Depends(auth)])
+async def agent_task_create(body: ChatRequest):
+    try: return await AgentRuntime().run(body.message, body.provider)
+    except Exception as exc: raise HTTPException(status_code=503, detail=str(exc))
+
 @app.get("/v1/agent/tasks/{task_id}", dependencies=[Depends(auth)])
 async def task(task_id:int):
     with connect() as db: row=db.execute("SELECT * FROM tasks WHERE id=?",(task_id,)).fetchone()
     if not row: raise HTTPException(404,"Task not found")
     return dict(row)
+
+@app.get("/v1/agent/tasks/{task_id}/trace", dependencies=[Depends(auth)])
+async def task_trace(task_id:int):
+    with connect() as db:
+        task=db.execute("SELECT id FROM tasks WHERE id=?", (task_id,)).fetchone()
+        if not task: raise HTTPException(404,"Task not found")
+        return [dict(r) for r in db.execute("SELECT * FROM task_trace WHERE task_id=? ORDER BY id", (task_id,))]
+
+@app.post("/v1/agent/tasks/{task_id}/approve", dependencies=[Depends(auth)])
+async def task_approve(task_id:int):
+    try: return await AgentRuntime().approve(task_id)
+    except LookupError as exc: raise HTTPException(404,str(exc))
+    except ValueError as exc: raise HTTPException(409,str(exc))
+    except Exception as exc: raise HTTPException(503,str(exc))
+
+@app.post("/v1/agent/tasks/{task_id}/cancel", dependencies=[Depends(auth)])
+async def task_cancel(task_id:int):
+    try: return await AgentRuntime().cancel(task_id)
+    except LookupError as exc: raise HTTPException(404,str(exc))
 
 @app.get("/v1/memory/search", dependencies=[Depends(auth)])
 async def memory_search(q:str=Query(min_length=1)):
