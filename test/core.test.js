@@ -1,0 +1,3 @@
+import test from "node:test";import assert from "node:assert/strict";import {Memory} from "../src/memory.js";import {Skills} from "../src/skills.js";
+test("memory search returns matching entries",async()=>{const s={memory:[],skills:[]};const save=async()=>{};const m=new Memory(s,save);await m.add("Nexora runs on Linux");assert.equal(m.search("linux")[0].content,"Nexora runs on Linux")});
+test("skills require explicit approval",async()=>{const s={memory:[],skills:[]};const k=new Skills(s,async()=>{});const x=await k.propose("demo","d","i");assert.equal(x.status,"proposed");await k.approve(x.id);assert.equal(x.status,"active");await k.rollback(x.id);assert.equal(x.status,"rolled_back")});
