@@ -45,6 +45,8 @@ export function updateUiSettings(input={}) {
       if(secretLike.test(key)) throw Error("Secrets must be configured through environment variables, not UI settings.");
       const template=allowed[section][key];
       if(typeof value!==typeof template && value!==null) throw Error("Invalid type for setting: "+section+"."+key);
+      const choices={approvalMode:["ask","safe","trusted"],theme:["dark","light","system"],fallbackPolicy:["never","manual"],level:["debug","info","warn","error"]};
+      if(choices[key]&&!choices[key].includes(value))throw Error("Invalid value for setting: "+section+"."+key);
       if(typeof value==="number" && (!Number.isFinite(value)||value<0)) throw Error("Setting must be a non-negative number: "+key);
       if(typeof value==="string" && value.length>2000) throw Error("Setting is too long: "+key);
       current[section][key]=value;
