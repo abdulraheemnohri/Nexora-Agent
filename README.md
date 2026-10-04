@@ -51,6 +51,7 @@ Current compatibility milestone:
 - Persistent local session transcripts with atomic writes and restrictive file permissions
 - Web dashboard Conversations page; direct chat messages can be attached to the selected saved session
 - Existing provider registry, approval-aware agent loop, task queue, skills, MCP registry, scheduler, memory, settings and audit UI remain available
+- `GET /api/providers/health` reports provider configuration and local LiteRT-LM availability without sending prompts or revealing API keys; use the explicit provider Test action for a real connectivity probe.
 
 Compatibility boundaries: slash commands are a subset, not a promise of exact upstream command behavior. Messaging gateway integrations, voice, rich TUI streaming, autonomous learning loops, all upstream tools/backends, and full upstream configuration parity are not implemented by this milestone. Do not expose the web server to an untrusted network without reviewing authentication and deployment settings.
 
