@@ -28,6 +28,7 @@ import {discoverProviderModels,testProviderConnection} from "./src/provider-disc
 import {getUiSettings,updateUiSettings,resetUiSettingsSection} from "./src/ui-settings.js";
 import {listSessions,createSession,getSession,appendMessage} from "./src/sessions.js";
 import {buildProviderHealth} from "./src/provider-health.js";
+import {toolSchema,allToolSchemas} from "./src/tools/schemas.js";
 
 const state=await loadState();
 const config=await loadConfig();
@@ -102,7 +103,7 @@ const server=http.createServer(async(req,res)=>{try{
  const sm=u.pathname.match(/^\/api\/skills\/([^/]+)\/(approve|rollback|disable)$/);if(sm&&req.method==="POST"){if(sm[2]==="approve")return json(res,200,await skills.approve(sm[1]));if(sm[2]==="disable")return json(res,200,await skills.disable(sm[1]));return json(res,200,await skills.rollback(sm[1]));}
 
  if(req.method==="GET"&&u.pathname==="/api/features")return json(res,200,{features:HERMES_FEATURES,toolsets:listToolsets(),tools:listTools()});
- if(req.method==="GET"&&u.pathname==="/api/tools")return json(res,200,toolsStatus());
+ if(req.method==="GET"&&u.pathname==="/api/tools")return json(res,200,{tools:toolsStatus(),schemas:allToolSchemas()});
  if(req.method==="GET"&&u.pathname==="/api/toolsets")return json(res,200,toolsetsStatus());
  if(req.method==="GET"&&u.pathname==="/api/settings")return json(res,200,getUiSettings());
  if(req.method==="PUT"&&u.pathname==="/api/settings"){const b=await readBody(req);const updated=updateUiSettings(b);applyUiRuntimeSettings(updated);audit(state,{event:"ui_settings_updated",sections:Object.keys(b)});await saveState(state);return json(res,200,updated)}
