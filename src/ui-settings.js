@@ -3,7 +3,8 @@ import path from "node:path";
 
 const defaults = () => ({
   general: { agentName:"Nexora", language:"en", timezone:"Asia/Karachi", workspace:"./workspace", theme:"dark", compactMode:false, confirmNavigation:false },
-  ai: { preferredProvider:"manual", preferredModel:"", fallbackPolicy:"never", maxSteps:20, temperature:0.2, streamResponses:true, contextLimit:32768 },
+  providers: { preferredProvider:"manual", fallbackPolicy:"never" },
+  models: { preferredModel:"smart-mini", maxSteps:20, temperature:0.2, streamResponses:true, contextLimit:32768 },
   terminal: { approvalMode:"ask", timeoutSeconds:120, workingDirectory:"./workspace", allowShell:false, keepCommandHistory:true, maxOutputKb:256 },
   tools: { enabledToolsets:["filesystem","git","system","http"], maxParallelTools:2, requireWriteApproval:true, allowNetwork:true },
   permissions: { approvalMode:"ask", allowDestructive:false, allowOutsideWorkspace:false, allowPrivilegeEscalation:false, requireApprovalForExternalCalls:true },
