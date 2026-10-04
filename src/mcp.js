@@ -5,7 +5,7 @@ export class McpClient{
  constructor(command,args=[],opts={}){this.command=String(command);this.args=Array.isArray(args)?args:[];this.timeout=Math.min(Math.max(Number(opts.timeout)||15000,1000),120000);this.child=null;this.tools=[]}
  async connect(){if(this.child)return;this.child=spawn(this.command,this.args,{stdio:["pipe","pipe","pipe"],shell:false,env:{...process.env}});this.child.on("exit",()=>{this.child=null});await rpc(this.child,"initialize",{protocolVersion:"2025-06-18",capabilities:{},clientInfo:{name:"nexora-agent",version:"1.6.0"}},this.timeout);await notify(this.child,"notifications/initialized",{});this.tools=(await this.listTools()).tools||[];return{tools:this.tools}}
  async listTools(){if(!this.child)throw Error("MCP client is not connected");return rpc(this.child,"tools/list",{},this.timeout)}
- async callTool(name,arguments={}){if(!this.child)throw Error("MCP client is not connected");if(!this.tools.some(t=>t.name===name))throw Error("MCP tool not advertised: "+name);return rpc(this.child,"tools/call",{name,arguments},this.timeout)}
+ async callTool(name,toolArguments={}){if(!this.child)throw Error("MCP client is not connected");if(!this.tools.some(t=>t.name===name))throw Error("MCP tool not advertised: "+name);return rpc(this.child,"tools/call",{name,arguments:toolArguments},this.timeout)}
  close(){if(this.child){this.child.kill();this.child=null}}
 }
-export function startMcpServer(command,args=[],opts={}){const client=new McpClient(command,args,opts);return{initialize:()=>client.connect(),listTools:()=>client.listTools(),callTool:(name,arguments)=>client.callTool(name,arguments),close:()=>client.close()}}
+export function startMcpServer(command,args=[],opts={}){const client=new McpClient(command,args,opts);return{initialize:()=>client.connect(),listTools:()=>client.listTools(),callTool:(name,toolArguments)=>client.callTool(name,toolArguments),close:()=>client.close()}}
