@@ -31,6 +31,7 @@ const scheduler=new Scheduler(state,saveState,queue);
 const delegation=new Delegation(state,saveState,queue,{maxDelegationDepth:Number(process.env.NEXORA_MAX_DELEGATION_DEPTH||2),maxChildTasks:Number(process.env.NEXORA_MAX_CHILD_TASKS||4)});
 scheduler.restore();
 queue.start();
+for(const m of listMcpServers().filter(x=>x.enabled!==false)){try{await agent.registry.addMcpServer(m.name,m.command,m.args,{timeout:m.timeout})}catch(e){audit(state,{event:"mcp_start_failed",server:m.name,error:e.message})}}
 
 const server=http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,`http://${req.headers.host||"localhost"}`);
