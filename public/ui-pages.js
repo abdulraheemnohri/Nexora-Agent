@@ -23,10 +23,9 @@
     const [providers,models]=await Promise.all([api("/api/providers"),api("/api/models")]);
     let sessions=await api("/api/sessions");let activeId=localStorage.nexoraSessionId||"";
     if(!sessions.some(s=>s.id===activeId)){const created=await api("/api/sessions",{method:"POST",body:JSON.stringify({title:"New conversation"})});activeId=created.id;localStorage.nexoraSessionId=activeId;sessions=await api("/api/sessions");}
-    const activeSession=sessions.find(s=>s.id===activeId);
     const list=providers.dynamicProviders||[];
     view.innerHTML=card("Chat with Nexora",heading("Agent console","Send a direct request or queue a longer task. Provider selection is explicit; Nexora will not silently switch to a cloud provider.")+
-      '<label class="cap-field"><span>Conversation</span><select id="chat-session">'+sessions.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===activeId?" selected":"")+">'+esc(s.title)+" · "+esc(s.messageCount||0)+" messages</option>").join("")+'</select></label><div class="cap-actions">'+button("New conversation","session-new")+'<button class="icon-btn" type="button" data-ui-action="goto" data-id="sessions">Manage sessions</button></div>'+
+      '<label class="cap-field"><span>Conversation</span><select id="chat-session">'+sessions.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===activeId?" selected":"")+'>'+esc(s.title)+" · "+esc(s.messageCount||0)+" messages</option>").join("")+'</select></label><div class="cap-actions">'+button("New conversation","session-new")+'<button class="icon-btn" type="button" data-ui-action="goto" data-id="sessions">Manage sessions</button></div>'+
       '<form id="ui-chat-form">'+field("Message","chat-message","Ask Nexora to inspect, plan, explain or create…")+
       '<label class="cap-field"><span>Provider override</span><select id="chat-provider"><option value="">Use configured default</option>'+list.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name||p.id)+'</option>').join("")+'</select></label>'+
       '<div class="cap-actions"><button class="primary" type="submit">Send message</button><button class="icon-btn" type="button" data-ui-action="queue-chat">Create queued task</button></div></form><div id="chat-result"></div>')+
