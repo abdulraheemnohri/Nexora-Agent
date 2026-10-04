@@ -1,8 +1,11 @@
 import crypto from "node:crypto";
 export class Skills{
- constructor(state,save){this.state=state;this.save=save}
- list(){return this.state.skills}
- async propose(name,description,instructions){const s={id:crypto.randomUUID(),name:String(name),description:String(description||""),instructions:String(instructions||""),version:1,status:"proposed",createdAt:new Date().toISOString()};this.state.skills.push(s);await this.save(this.state);return s}
- async approve(id){const s=this.state.skills.find(x=>x.id===id);if(!s)throw Error("Skill not found");if(s.status!=="proposed")throw Error("Skill is not awaiting approval");s.status="active";s.approvedAt=new Date().toISOString();await this.save(this.state);return s}
- async rollback(id){const s=this.state.skills.find(x=>x.id===id);if(!s)throw Error("Skill not found");s.status="rolled_back";s.rolledBackAt=new Date().toISOString();await this.save(this.state);return s}
+ constructor(state,save){this.state=state;this.save=save;this.state.skills??=[]}
+ list(status){return status?this.state.skills.filter(s=>s.status===status):this.state.skills}
+ get(id){return this.state.skills.find(s=>s.id===id)||null}
+ async propose(name,description,instructions){const s={id:crypto.randomUUID(),name:String(name),description:String(description||""),instructions:String(instructions||""),version:1,status:"proposed",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),history:[]};this.state.skills.push(s);await this.save(this.state);return s}
+ async approve(id){const s=this.get(id);if(!s)throw Error("Skill not found");if(s.status!=="proposed")throw Error("Skill is not awaiting approval");s.history.push({version:s.version,status:s.status,at:new Date().toISOString()});s.status="active";s.approvedAt=new Date().toISOString();s.updatedAt=s.approvedAt;await this.save(this.state);return s}
+ async disable(id){const s=this.get(id);if(!s)throw Error("Skill not found");if(s.status!=="active")throw Error("Only active skills can be disabled");s.history.push({version:s.version,status:s.status,at:new Date().toISOString()});s.status="disabled";s.updatedAt=new Date().toISOString();await this.save(this.state);return s}
+ async rollback(id){const s=this.get(id);if(!s)throw Error("Skill not found");s.history.push({version:s.version,status:s.status,at:new Date().toISOString()});s.status="rolled_back";s.rolledBackAt=new Date().toISOString();s.updatedAt=s.rolledBackAt;await this.save(this.state);return s}
+ async version(id,patch={}){const s=this.get(id);if(!s)throw Error("Skill not found");if(s.status==="active")throw Error("Deactivate skill before editing");s.history.push({version:s.version,name:s.name,description:s.description,instructions:s.instructions,status:s.status,at:new Date().toISOString()});if(patch.name!==undefined)s.name=String(patch.name);if(patch.description!==undefined)s.description=String(patch.description);if(patch.instructions!==undefined)s.instructions=String(patch.instructions);s.version++;s.status="proposed";s.updatedAt=new Date().toISOString();await this.save(this.state);return s}
 }
