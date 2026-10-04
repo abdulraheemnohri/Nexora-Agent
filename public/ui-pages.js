@@ -111,6 +111,8 @@
       if(a==="task-retry"){await api("/api/tasks/"+encodeURIComponent(id)+"/retry",{method:"POST",body:"{}"});toast("Retry queued");render("tasks");return}
       if(a==="open-task"){render("tasks");return}
       if(a==="model-test"||a==="model-use"||a==="model-install"){const op=a.slice(6);const result=await api("/api/models/"+encodeURIComponent(id)+"/"+op,{method:"POST",body:"{}"});toast("Model "+op+" request finished");const target=view.querySelector(".card");if(target)target.insertAdjacentHTML("beforeend",'<pre>'+esc(JSON.stringify(result,null,2))+'</pre>');return}
+      if(a==="memory-archive"){await api("/api/memory/"+encodeURIComponent(id)+"/archive",{method:"POST",body:"{}"});toast("Memory archived");render("memory");return}
+      if(a==="memory-delete"){if(!confirm("Permanently delete this memory entry?"))return;await api("/api/memory/"+encodeURIComponent(id),{method:"DELETE",body:"{}"});toast("Memory deleted");render("memory");return}
       if(a==="schedule-cancel"){await api("/api/schedules/"+encodeURIComponent(id)+"/cancel",{method:"POST",body:"{}"});toast("Schedule cancelled");render("schedules");return}
     }catch(err){toast(err.message)}
   },true);
