@@ -30,7 +30,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(req.method==="GET"&&u.pathname==="/api/tools")return json(res,200,toolsStatus());
  if(req.method==="GET"&&u.pathname==="/api/toolsets")return json(res,200,toolsetsStatus());
  if(req.method==="GET"&&u.pathname==="/api/config")return json(res,200,config);
- if(req.method==="GET"&&u.pathname==="/api/state")return json(res,200,{memory:state.memory,skills:state.skills,tasks:state.tasks,schedules:state.schedules,audit:state.audit});
+ if(req.method==="GET"&&u.pathname==="/api/state")return json(res,200,{memory:state.memory,skills:state.skills,tasks:state.tasks,schedules:state.schedules,audit:state.audit,queue:queue.snapshot()});
  if(req.method==="GET"&&u.pathname==="/api/memory")return json(res,200,memory.search(u.searchParams.get("q")||"",Number(u.searchParams.get("limit")||20)));
  if(req.method==="GET"&&u.pathname==="/api/skills")return json(res,200,skills.list());
  if(req.method==="POST"&&u.pathname==="/api/chat"){const b=await readBody(req);audit(state,{event:"chat",provider:b.provider||null});await saveState(state);return json(res,200,await agent.run(String(b.message||""),b.provider));}
@@ -41,6 +41,8 @@ const server=http.createServer(async(req,res)=>{try{
  const sm=u.pathname.match(/^\/api\/skills\/([^/]+)\/(approve|rollback)$/);if(sm&&req.method==="POST")return json(res,200,sm[2]==="approve"?await skills.approve(sm[1]):await skills.rollback(sm[1]));
  if(req.method==="POST"&&u.pathname==="/api/schedules"){const b=await readBody(req);return json(res,201,await scheduler.add(b.message,b.delayMs,b.provider))}
  const cm=u.pathname.match(/^\/api\/schedules\/([^/]+)\/cancel$/);if(cm&&req.method==="POST")return json(res,200,await scheduler.cancel(cm[1]));
+ if(req.method==="GET"&&u.pathname==="/api/tasks")return json(res,200,state.tasks.slice().reverse());
+ if(req.method==="GET"&&u.pathname==="/api/audit")return json(res,200,state.audit.slice().reverse());
  if(req.method==="POST"&&u.pathname==="/api/webhooks/telegram")return json(res,200,{ok:true});
  if(req.method==="POST"&&u.pathname==="/api/webhooks/whatsapp")return json(res,200,{ok:true});
  return json(res,404,{error:"Not found"});
