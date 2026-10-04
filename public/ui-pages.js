@@ -40,7 +40,7 @@
   }
   async function models(){
     const result=await api("/api/models"),list=result.models||[];
-    view.innerHTML=card("Model manager",heading("Local inference","Model actions depend on the installed LiteRT-LM runtime and model catalog. The UI reports backend results instead of pretending a download succeeded.")+"<p class=\"muted\">Active model: "+esc(result.active||"unknown")+"</p>"+(list||[]).map(m=>'<div class="task-row"><div><b>'+esc(m.name||m.id)+'</b><small>'+esc(m.id)+' · '+esc(m.runtime||m.backend||"runtime not reported")+'</small><small>'+esc(m.description||m.status||"")+'</small></div><div class="task-actions">'+button("Test","model-test",m.id)+button("Use","model-use",m.id,"approve")+button("Install / prepare","model-install",m.id)+'</div></div>').join("")||'<p class="muted">No models returned by the model catalog.</p>');
+    view.innerHTML=card("Model manager",heading("Local inference","Model actions depend on the installed LiteRT-LM runtime and model catalog. The UI reports backend results instead of pretending a download succeeded.")+"<p class=\"muted\">Active model: "+esc(result.active||"unknown")+"</p>"+(list||[]).map(m=>'<div class="task-row"><div><b>'+esc(m.name||m.id)+'</b><small>'+esc(m.id)+' · '+esc(m.provider||"provider unknown")+'</small><small>'+esc((m.cliInstalled?"LiteRT-LM CLI available":"LiteRT-LM CLI missing")+" · "+(m.active?"Active model":m.lastOk?"Last test passed":"Not yet tested")+" · "+(m.repo||""))+'</small></div><div class="task-actions">'+button("Test","model-test",m.id)+button("Use","model-use",m.id,"approve")+button("Check runtime","model-install",m.id)+'</div></div>').join("")||'<p class="muted">No models returned by the model catalog.</p>');
   }
   async function schedules(){
     const state=await api("/api/state"),list=state.schedules||[];
@@ -64,7 +64,7 @@
     const list=await api("/api/audit");
     view.innerHTML=card("Audit trail",'<p class="muted">Audit records help trace task approvals and configuration changes.</p><div class="task-actions"><button class="icon-btn" data-ui-action="export-audit">Export JSON</button></div>')+card("Events",(list||[]).map(a=>'<div class="task-row"><div><b>'+esc(a.event||a.action||"event")+'</b><small>'+esc(a.createdAt||a.timestamp||"")+'</small><pre>'+esc(JSON.stringify(a,null,2))+'</pre></div></div>').join("")||'<p class="muted">No audit events recorded.</p>');
   }
-  const sectionNames={general:"General",ai:"AI Providers & Models",terminal:"Terminal",tools:"Tools",permissions:"Permissions",memory:"Memory",skills:"Skills",scheduler:"Scheduler",channels:"Channels",security:"Security",network:"Network",mcp:"MCP",logging:"Logging",backups:"Backups",system:"System",about:"About"};
+  const sectionNames={general:"General",providers:"AI Providers",models:"Models",terminal:"Terminal",tools:"Tools",permissions:"Permissions",memory:"Memory",skills:"Skills",scheduler:"Scheduler",channels:"Channels",security:"Security",network:"Network",mcp:"MCP",logging:"Logging",backups:"Backups",system:"System",about:"About"};
   function settingsField(section,key,value){
     const id="setting-"+section+"-"+key, label=key.replace(/([A-Z])/g," $1").replace(/^./,x=>x.toUpperCase());
     if(typeof value==="boolean")return '<label class="cap-check"><input type="checkbox" id="'+id+'" data-section="'+section+'" data-key="'+key+'" '+(value?"checked":"")+'><span>'+esc(label)+'</span></label>';
