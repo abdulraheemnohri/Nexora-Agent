@@ -1,0 +1,7 @@
+import test from "node:test";import assert from "node:assert/strict";import crypto from "node:crypto";
+function hash(t){return crypto.createHash("sha256").update(t).digest("hex");}
+function verify(v,enc){const a=Buffer.from(String(v)),b=Buffer.from(Buffer.from(enc,"base64").toString("utf8"));return a.length===b.length&&crypto.timingSafeEqual(a,b);}
+function origin(o,h){try{return !!o&&new URL(o).host===h;}catch{return false;}}
+test("password verification accepts only exact configured password",()=>{const e=Buffer.from("long-test-password").toString("base64");assert.equal(verify("long-test-password",e),true);assert.equal(verify("wrong",e),false);assert.equal(verify("",e),false);});
+test("session token hashes are deterministic and not plaintext",()=>{const t=crypto.randomBytes(32).toString("base64url");assert.notEqual(hash(t),t);assert.equal(hash(t),hash(t));});
+test("origin validation rejects absent and cross-origin requests",()=>{assert.equal(origin("https://nexora-ai.local:8443","nexora-ai.local:8443"),true);assert.equal(origin("https://evil.example","nexora-ai.local:8443"),false);assert.equal(origin(undefined,"nexora-ai.local:8443"),false);assert.equal(origin("bad url","nexora-ai.local:8443"),false);});
